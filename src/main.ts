@@ -2,13 +2,11 @@ import './components/schematic-canvas';
 import './components/toolbar';
 import { store } from './store/schematicStore';
 
-// Setup the base HTML
 document.getElementById('app')!.innerHTML = `
     <app-toolbar></app-toolbar>
     <schematic-canvas></schematic-canvas>
 `;
 
-// Initial load of assets
 (async () => {
   await store.library.loadComponent('resistor', `
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 60" width="160" height="60">
@@ -45,5 +43,5 @@ document.getElementById('app')!.innerHTML = `
   />
 </svg>
     `);
-  store.notify(); // Tell toolbar the image is ready
+  store.notify();
 })();
