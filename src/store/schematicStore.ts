@@ -1,4 +1,4 @@
-import type { Tool, Pin, ComponentDefinition, ComponentInstance, WorldPin } from '../types/schematic.ts';
+import type { Tool, Pin, ComponentDefinition, ComponentInstance, WorldPin, Wire } from '../types/schematic.ts';
 import { SpatialIndex } from './spatialIndex.ts';
 
 class ComponentLibrary {
@@ -48,6 +48,9 @@ class SchematicStore {
   public library = new ComponentLibrary();
   public spatialIndex = new SpatialIndex();
 
+  public wires: Wire[] = [];
+  public pendingWire: { startPin: WorldPin; currentPos: { x: number, y: number } } | null = null;
+
   private listeners: Array<() => void> = [];
 
   snap(value: number): number {
@@ -91,10 +94,66 @@ class SchematicStore {
     if (moved) this.updateSpatialIndex();
   }
 
+  // Add this to your deleteSelected logic
   deleteSelected() {
+    // Delete components
     this.components = this.components.filter(comp => !this.selectedComponentIds.has(comp.id));
+
+    // Delete wires that are connected to deleted components
+    const deletedCompIds = new Set(this.selectedComponentIds);
+    // Note: you'll need to capture the IDs before clearing the selection set
+    this.wires = this.wires.filter(wire =>
+      !deletedCompIds.has(wire.startPin.componentId) &&
+      !deletedCompIds.has(wire.endPin.componentId)
+    );
+
     this.selectedComponentIds.clear();
     this.updateSpatialIndex();
+  }
+
+  createWire(start: WorldPin, end: WorldPin) {
+    const wireId = crypto.randomUUID();
+    const wire: Wire = {
+      id: wireId,
+      startPin: start,
+      endPin: end,
+      segments: [{
+        id: crypto.randomUUID(),
+        x1: start.x,
+        y1: start.y,
+        x2: end.x,
+        y2: end.y
+      }]
+    };
+    this.wires.push(wire);
+  }
+
+  // Call this in the render loop or mouseMove to keep wires updated 
+  // when components move (since pins are relative)
+  updateWirePositions() {
+    this.wires.forEach(wire => {
+      // Recalculate the world position of the pins
+      const startComp = this.components.find(c => c.id === wire.startPin.componentId);
+      const endComp = this.components.find(c => c.id === wire.endPin.componentId);
+
+      if (startComp && endComp) {
+        const sPin = startComp.definition.pins.find(p => p.number === wire.startPin.pinNumber)!;
+        const ePin = endComp.definition.pins.find(p => p.number === wire.endPin.pinNumber)!;
+
+        wire.startPin.x = startComp.x + sPin.x;
+        wire.startPin.y = startComp.y + sPin.y;
+        wire.endPin.x = endComp.x + ePin.x;
+        wire.endPin.y = endComp.y + ePin.y;
+
+        // Update the first segment (Pass 1: simple line)
+        if (wire.segments[0]) {
+          wire.segments[0].x1 = wire.startPin.x;
+          wire.segments[0].y1 = wire.startPin.y;
+          wire.segments[0].x2 = wire.endPin.x;
+          wire.segments[0].y2 = wire.endPin.y;
+        }
+      }
+    });
   }
 
   setSelected(id: string | null, multi: boolean = false) {

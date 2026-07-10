@@ -27,3 +27,18 @@ export interface WorldPin {
   x: number;
   y: number;
 }
+
+export interface WireSegment {
+  id: string;
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+}
+
+export interface Wire {
+  id: string;
+  startPin: WorldPin;
+  endPin: WorldPin;
+  segments: WireSegment[]; // Essential for future A* routing and segment-moving
+}

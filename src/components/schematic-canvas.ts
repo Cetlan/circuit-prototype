@@ -2,6 +2,7 @@ import { LitElement, html, css } from 'lit';
 import { customElement, query } from 'lit/decorators.js';
 import { store } from '../store/schematicStore';
 import type { WorldPin } from '../types/schematic';
+import { CanvasUtils } from '../utils/canvasUtils';
 
 @customElement('schematic-canvas')
 export class SchematicCanvas extends LitElement {
@@ -47,12 +48,30 @@ export class SchematicCanvas extends LitElement {
   }
 
   handleMouseDown(e: MouseEvent) {
+    // 1. WIRING MODE
+    if (store.activeTool === 'wire') {
+      const pin = this.updatePinProximity();
+      if (pin) {
+        // Start the "rubber band" wire
+        store.pendingWire = {
+          startPin: pin,
+          currentPos: { ...this.mousePos }
+        };
+        // Stop the event from triggering other behaviors
+        e.stopPropagation();
+        return;
+      }
+    }
+
+    // 2. SELECTION MODE
     if (store.activeTool === 'selection') {
       this.handleSelectionClick(e);
+
       const clickedSomething = store.components.some(comp =>
         this.mousePos.x >= comp.x && this.mousePos.x <= comp.x + comp.definition.width &&
         this.mousePos.y >= comp.y && this.mousePos.y <= comp.y + comp.definition.height
       );
+
       if (store.selectedComponentIds.size > 0 && clickedSomething) {
         this.isDragging = true;
         this.lastMousePos = { ...this.mousePos };
@@ -60,9 +79,30 @@ export class SchematicCanvas extends LitElement {
     }
   }
 
-  handleMouseUp() { this.isDragging = false; }
+  handleMouseUp(e: MouseEvent) {
+    this.isDragging = false;
+
+    if (store.activeTool === 'wire' && store.pendingWire) {
+      const endPin = this.updatePinProximity();
+
+      if (endPin) {
+        const start = store.pendingWire.startPin;
+        const isSamePin =
+          endPin.componentId === start.componentId &&
+          endPin.pinNumber === start.pinNumber;
+
+        if (!isSamePin) {
+          store.createWire(start, endPin);
+        }
+      }
+      // Always clear the pending wire once the mouse is released
+      store.pendingWire = null;
+    }
+  }
 
   handleClick(e: MouseEvent) {
+    // The ONLY thing handleClick should do now is Component Placement.
+    // Selection and Wiring are now handled by MouseDown/Up for better responsiveness.
     if (store.activeTool === 'component') {
       const def = store.getActiveToolDefinition();
       if (def) {
@@ -105,6 +145,37 @@ export class SchematicCanvas extends LitElement {
     if (!this.ctx) return;
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
+    // IMPORTANT: Update wire positions if components moved
+    store.updateWirePositions();
+
+    CanvasUtils.drawGrid(this.ctx, this.canvas.width, this.canvas.height);
+
+    // 1. Draw Wires
+    this.ctx.save();
+    this.ctx.strokeStyle = '#2c3e50'; // Dark slate for wires
+    this.ctx.lineWidth = 2;
+
+    // Draw established wires
+    store.wires.forEach(wire => {
+      wire.segments.forEach(seg => {
+        this.ctx.beginPath();
+        this.ctx.moveTo(seg.x1, seg.y1);
+        this.ctx.lineTo(seg.x2, seg.y2);
+        this.ctx.stroke();
+      });
+    });
+
+    // Draw pending wire (rubber-banding)
+    if (store.pendingWire) {
+      this.ctx.beginPath();
+      this.ctx.strokeStyle = 'rgba(255, 140, 0, 0.6)'; // Orange for pending
+      this.ctx.setLineDash([5, 5]);
+      this.ctx.moveTo(store.pendingWire.startPin.x, store.pendingWire.startPin.y);
+      this.ctx.lineTo(this.mousePos.x, this.mousePos.y);
+      this.ctx.stroke();
+      this.ctx.setLineDash([]);
+    }
+    this.ctx.restore();
     // --- 1. Grid ---
     this.ctx.beginPath();
     this.ctx.strokeStyle = '#e0e0e0';
