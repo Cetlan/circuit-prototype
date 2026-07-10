@@ -28,90 +28,37 @@ export class SchematicCanvas extends LitElement {
     this.canvas.height = window.innerHeight;
   }
 
-  handleMouseMove(e: MouseEvent) {
-    this.mousePos = { x: e.clientX, y: e.clientY };
-
-    // Update cursor based on wiring proximity
-    if (store.activeTool === 'wire') {
-      const pin = this.updatePinProximity();
-      this.canvas.style.cursor = pin ? 'pointer' : 'crosshair';
-    } else {
-      this.canvas.style.cursor = 'crosshair';
-    }
-
-    if (this.isDragging) {
-      const dx = this.mousePos.x - this.lastMousePos.x;
-      const dy = this.mousePos.y - this.lastMousePos.y;
-      store.moveSelected(dx, dy);
-      this.lastMousePos = { ...this.mousePos };
-    }
+  // Helper to translate raw event coordinates to Canvas World Space
+  private getWorldPos(e: MouseEvent): { x: number, y: number } {
+    const rect = this.canvas.getBoundingClientRect();
+    return {
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top
+    };
   }
 
   handleMouseDown(e: MouseEvent) {
-    // 1. WIRING MODE
-    if (store.activeTool === 'wire') {
-      const pin = this.updatePinProximity();
-      if (pin) {
-        // Start the "rubber band" wire
-        store.pendingWire = {
-          startPin: pin,
-          currentPos: { ...this.mousePos }
-        };
-        // Stop the event from triggering other behaviors
-        e.stopPropagation();
-        return;
-      }
-    }
+    const worldPos = this.getWorldPos(e);
+    store.mousePos = worldPos; // Sync for onDraw
+    store.activeTool.onMouseDown?.(e, worldPos);
+  }
 
-    // 2. SELECTION MODE
-    if (store.activeTool === 'selection') {
-      this.handleSelectionClick(e);
-
-      const clickedSomething = store.components.some(comp =>
-        this.mousePos.x >= comp.x && this.mousePos.x <= comp.x + comp.definition.width &&
-        this.mousePos.y >= comp.y && this.mousePos.y <= comp.y + comp.definition.height
-      );
-
-      if (store.selectedComponentIds.size > 0 && clickedSomething) {
-        this.isDragging = true;
-        this.lastMousePos = { ...this.mousePos };
-      }
-    }
+  handleMouseMove(e: MouseEvent) {
+    const worldPos = this.getWorldPos(e);
+    this.mousePos = worldPos;
+    store.mousePos = worldPos; // Sync for onDraw
+    store.activeTool.onMouseMove?.(e, worldPos);
   }
 
   handleMouseUp(e: MouseEvent) {
-    this.isDragging = false;
-
-    if (store.activeTool === 'wire' && store.pendingWire) {
-      const endPin = this.updatePinProximity();
-
-      if (endPin) {
-        const start = store.pendingWire.startPin;
-        const isSamePin =
-          endPin.componentId === start.componentId &&
-          endPin.pinNumber === start.pinNumber;
-
-        if (!isSamePin) {
-          store.createWire(start, endPin);
-        }
-      }
-      // Always clear the pending wire once the mouse is released
-      store.pendingWire = null;
-    }
+    const worldPos = this.getWorldPos(e);
+    store.activeTool.onMouseUp?.(e, worldPos);
   }
 
   handleClick(e: MouseEvent) {
-    // The ONLY thing handleClick should do now is Component Placement.
-    // Selection and Wiring are now handled by MouseDown/Up for better responsiveness.
-    if (store.activeTool === 'component') {
-      const def = store.getActiveToolDefinition();
-      if (def) {
-        store.addComponent(this.mousePos.x, this.mousePos.y, def);
-        store.setTool('selection');
-      }
-    }
+    const worldPos = this.getWorldPos(e);
+    store.activeTool.onClick?.(e, worldPos);
   }
-
   private handleSelectionClick(e: MouseEvent) {
     const isMultiSelect = e.ctrlKey || e.metaKey;
     const clickedComp = [...store.components].reverse().find(comp =>
@@ -187,68 +134,7 @@ export class SchematicCanvas extends LitElement {
     // --- 2. Components ---
     store.components.forEach(comp => this.ctx.drawImage(comp.definition.img, comp.x, comp.y));
 
-    // --- 3. Selection ---
-    if (store.selectedComponentIds.size > 0) {
-      this.ctx.save(); // Save the current state (colors, lineWidth)
-      this.ctx.strokeStyle = '#007bff';
-      this.ctx.lineWidth = 2;
-      this.ctx.setLineDash([5, 5]);
-      store.components.forEach(comp => {
-        if (store.selectedComponentIds.has(comp.id)) {
-          this.ctx.strokeRect(comp.x - 2, comp.y - 2, comp.definition.width + 4, comp.definition.height + 4);
-        }
-      });
-      this.ctx.restore(); // Restore state to exactly how it was before this block
-    }
-
-    // Wiring Tool
-    if (store.activeTool === 'wire') {
-      const pin = this.updatePinProximity();
-      if (pin) {
-        this.ctx.save();
-
-        // 1. THE CONTRAST RING (The "Edge")
-        // A slightly larger, thin black circle that defines the boundary
-        // so the orange doesn't bleed into the white background.
-        this.ctx.beginPath();
-        this.ctx.arc(pin.x, pin.y, 9, 0, Math.PI * 2);
-        this.ctx.strokeStyle = 'rgba(0, 0, 0, 0.6)';
-        this.ctx.lineWidth = 1;
-        this.ctx.stroke();
-
-        // 2. THE MAIN SIGNAL (The "Glow")
-        // Using a vibrant, saturated orange (#FF8C00) which 
-        // has much higher contrast on white than yellow does.
-        this.ctx.beginPath();
-        this.ctx.arc(pin.x, pin.y, 7, 0, Math.PI * 2);
-        this.ctx.strokeStyle = '#FF8C00';
-        this.ctx.lineWidth = 3;
-        this.ctx.stroke();
-
-        // 3. THE CORE (The "Fill")
-        // A semi-transparent orange fill for a "button" feel.
-        this.ctx.beginPath();
-        this.ctx.arc(pin.x, pin.y, 5, 0, Math.PI * 2);
-        this.ctx.fillStyle = 'rgba(255, 140, 0, 0.5)';
-        this.ctx.fill();
-
-        // 4. THE CENTER POINT
-        this.ctx.beginPath();
-        this.ctx.arc(pin.x, pin.y, 1.5, 0, Math.PI * 2);
-        this.ctx.fillStyle = 'black';
-        this.ctx.fill();
-
-        this.ctx.restore();
-      }
-    }
-
-    // --- 5. Ghost ---
-    const ghost = store.getActiveToolDefinition();
-    if (ghost) {
-      this.ctx.globalAlpha = 0.5;
-      this.ctx.drawImage(ghost.img, store.snap(this.mousePos.x), store.snap(this.mousePos.y));
-      this.ctx.globalAlpha = 1.0;
-    }
+    store.activeTool.onDraw?.(this.ctx);
   }
   renderLoop() { this.draw(); requestAnimationFrame(() => this.renderLoop()); }
 

@@ -28,6 +28,15 @@ export interface WorldPin {
   y: number;
 }
 
+export interface ToolInterface {
+  id: string;
+  onMouseDown?: (e: MouseEvent, worldPos: { x: number, y: number }) => void;
+  onMouseMove?: (e: MouseEvent, worldPos: { x: number, y: number }) => void;
+  onMouseUp?: (e: MouseEvent, worldPos: { x: number, y: number }) => void;
+  onClick?: (e: MouseEvent, worldPos: { x: number, y: number }) => void;
+  onDraw?: (ctx: CanvasRenderingContext2D) => void;
+}
+
 export interface WireSegment {
   id: string;
   x1: number;

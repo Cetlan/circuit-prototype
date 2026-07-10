@@ -1,5 +1,6 @@
-import type { Tool, Pin, ComponentDefinition, ComponentInstance, WorldPin, Wire } from '../types/schematic.ts';
+import type { Pin, ComponentDefinition, ComponentInstance, WorldPin, Wire, ToolInterface } from '../types/schematic.ts';
 import { SpatialIndex } from './spatialIndex.ts';
+import { PlacementTool, SelectionTool, WiringTool } from './tools.ts';
 
 class ComponentLibrary {
   private cache = new Map<string, ComponentDefinition>();
@@ -41,7 +42,15 @@ class ComponentLibrary {
 }
 
 class SchematicStore {
-  public activeTool: Tool = 'selection';
+  public tools: Record<string, ToolInterface> = {
+    selection: new SelectionTool(),
+    wire: new WiringTool(),
+    component: new PlacementTool(),
+  };
+  public activeTool: ToolInterface = this.tools.selection;
+  public mousePos = { x: 0, y: 0 }; // Still needed for the 60fps render loop
+
+
   private gridSize = 10;
   public components: ComponentInstance[] = [];
   public selectedComponentIds = new Set<string>();
@@ -57,10 +66,8 @@ class SchematicStore {
     return Math.round(value / this.gridSize) * this.gridSize;
   }
 
-  setTool(tool: Tool) { this.activeTool = tool; }
-
-  getActiveToolDefinition(): ComponentDefinition | null {
-    return this.activeTool === 'component' ? this.library.get('resistor') ?? null : null;
+  setTool(toolId: string) {
+    this.activeTool = this.tools[toolId];
   }
 
   updateSpatialIndex() {
