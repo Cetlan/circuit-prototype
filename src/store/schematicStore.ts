@@ -114,6 +114,25 @@ class SchematicStore {
     this.selectedComponentIds.clear();
   }
 
+  // Delete all selected components
+  deleteSelected() {
+    this.components = this.components.filter(
+      comp => !this.selectedComponentIds.has(comp.id)
+    );
+    this.selectedComponentIds.clear();
+  }
+
+  // Move selected components by a specific offset
+  moveSelected(dx: number, dy: number) {
+    this.components.forEach(comp => {
+      if (this.selectedComponentIds.has(comp.id)) {
+        // Apply delta and snap to grid
+        comp.x = this.snap(comp.x + dx);
+        comp.y = this.snap(comp.y + dy);
+      }
+    });
+  }
+
   private listeners: Array<() => void> = [];
   onLibraryUpdate(callback: () => void) {
     this.listeners.push(callback);
