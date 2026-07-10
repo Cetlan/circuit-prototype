@@ -1,4 +1,4 @@
-import type { WorldPin } from '../types/schematic';
+import type { WorldPin } from '../types/schematic.ts';
 
 export class SpatialIndex {
   private cellSize = 50;

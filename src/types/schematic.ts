@@ -1,4 +1,4 @@
-export type Tool = 'selection' | 'component' | 'wire';
+export type ToolId = 'selection' | 'component' | 'wire';
 
 export interface Pin {
   number: string;
@@ -28,15 +28,6 @@ export interface WorldPin {
   y: number;
 }
 
-export interface ToolInterface {
-  id: string;
-  onMouseDown?: (e: MouseEvent, worldPos: { x: number, y: number }) => void;
-  onMouseMove?: (e: MouseEvent, worldPos: { x: number, y: number }) => void;
-  onMouseUp?: (e: MouseEvent, worldPos: { x: number, y: number }) => void;
-  onClick?: (e: MouseEvent, worldPos: { x: number, y: number }) => void;
-  onDraw?: (ctx: CanvasRenderingContext2D) => void;
-}
-
 export interface WireSegment {
   id: string;
   x1: number;
@@ -49,5 +40,14 @@ export interface Wire {
   id: string;
   startPin: WorldPin;
   endPin: WorldPin;
-  segments: WireSegment[]; // Essential for future A* routing and segment-moving
+  segments: WireSegment[];
+}
+
+export interface ToolInterface {
+  id: ToolId;
+  onMouseDown?: (e: MouseEvent, worldPos: { x: number, y: number }) => void;
+  onMouseMove?: (e: MouseEvent, worldPos: { x: number, y: number }) => void;
+  onMouseUp?: (e: MouseEvent, worldPos: { x: number, y: number }) => void;
+  onClick?: (e: MouseEvent, worldPos: { x: number, y: number }) => void;
+  onDraw?: (ctx: CanvasRenderingContext2D) => void;
 }

@@ -1,31 +1,23 @@
-import type { Pin, ComponentDefinition, ComponentInstance, WorldPin, Wire, ToolInterface } from '../types/schematic.ts';
+import type { ToolId, Pin, ComponentDefinition, ComponentInstance, WorldPin, Wire, WireSegment, ToolInterface } from '../types/schematic.ts';
 import { SpatialIndex } from './spatialIndex.ts';
+import { router } from '../services/router.ts';
 import { PlacementTool, SelectionTool, WiringTool } from './tools.ts';
 
 class ComponentLibrary {
   private cache = new Map<string, ComponentDefinition>();
-
   async loadComponent(id: string, svgString: string): Promise<ComponentDefinition> {
     if (this.cache.has(id)) return this.cache.get(id)!;
-
     const parser = new DOMParser();
     const svgDoc = parser.parseFromString(svgString, 'image/svg+xml');
     const svgElement = svgDoc.querySelector('svg');
     if (!svgElement) throw new Error(`Invalid SVG for component ${id}`);
-
     const width = parseFloat(svgElement.getAttribute('width') || '0');
     const height = parseFloat(svgElement.getAttribute('height') || '0');
     const pinElements = svgDoc.querySelectorAll('[data-pin-number]');
-
     const pins: Pin[] = Array.from(pinElements).map(el => {
       const circle = el as SVGCircleElement;
-      return {
-        number: circle.getAttribute('data-pin-number') || '?',
-        x: parseFloat(circle.getAttribute('cx') || '0'),
-        y: parseFloat(circle.getAttribute('cy') || '0'),
-      };
+      return { number: circle.getAttribute('data-pin-number') || '?', x: parseFloat(circle.getAttribute('cx') || '0'), y: parseFloat(circle.getAttribute('cy') || '0') };
     }) as Pin[];
-
     return new Promise((resolve, reject) => {
       const img = new Image();
       img.onload = () => {
@@ -37,49 +29,42 @@ class ComponentLibrary {
       img.src = `data:image/svg+xml;base64,${btoa(svgString)}`;
     });
   }
-
   get(id: string) { return this.cache.get(id); }
 }
 
 class SchematicStore {
-  public tools: Record<string, ToolInterface> = {
-    selection: new SelectionTool(),
-    wire: new WiringTool(),
-    component: new PlacementTool(),
-  };
-  public activeTool: ToolInterface = this.tools.selection;
-  public mousePos = { x: 0, y: 0 }; // Still needed for the 60fps render loop
-
+  // 1. Declare types without assigning values immediately
+  public tools!: Record<ToolId, ToolInterface>;
+  public activeTool!: ToolInterface;
 
   private gridSize = 10;
   public components: ComponentInstance[] = [];
   public selectedComponentIds = new Set<string>();
+  public wires: Wire[] = [];
+  public pendingWire: { startPin: WorldPin, currentPos: { x: number, y: number } } | null = null;
   public library = new ComponentLibrary();
   public spatialIndex = new SpatialIndex();
-
-  public wires: Wire[] = [];
-  public pendingWire: { startPin: WorldPin; currentPos: { x: number, y: number } } | null = null;
-
+  public mousePos = { x: 0, y: 0 };
   private listeners: Array<() => void> = [];
 
-  snap(value: number): number {
-    return Math.round(value / this.gridSize) * this.gridSize;
+  // 2. The Initialization Method to break circular dependency
+  init() {
+    this.tools = {
+      selection: new SelectionTool(),
+      component: new PlacementTool(),
+      wire: new WiringTool(),
+    };
+    this.activeTool = this.tools.selection;
   }
 
-  setTool(toolId: string) {
-    this.activeTool = this.tools[toolId];
-  }
+  snap(value: number): number { return Math.round(value / this.gridSize) * this.gridSize; }
+  setTool(toolId: ToolId) { this.activeTool = this.tools[toolId]; }
 
   updateSpatialIndex() {
     this.spatialIndex.clear();
     this.components.forEach(comp => {
       comp.definition.pins.forEach(pin => {
-        this.spatialIndex.addPin({
-          componentId: comp.id,
-          pinNumber: pin.number,
-          x: comp.x + pin.x,
-          y: comp.y + pin.y
-        });
+        this.spatialIndex.addPin({ componentId: comp.id, pinNumber: pin.number, x: comp.x + pin.x, y: comp.y + pin.y });
       });
     });
   }
@@ -101,66 +86,12 @@ class SchematicStore {
     if (moved) this.updateSpatialIndex();
   }
 
-  // Add this to your deleteSelected logic
   deleteSelected() {
-    // Delete components
-    this.components = this.components.filter(comp => !this.selectedComponentIds.has(comp.id));
-
-    // Delete wires that are connected to deleted components
-    const deletedCompIds = new Set(this.selectedComponentIds);
-    // Note: you'll need to capture the IDs before clearing the selection set
-    this.wires = this.wires.filter(wire =>
-      !deletedCompIds.has(wire.startPin.componentId) &&
-      !deletedCompIds.has(wire.endPin.componentId)
-    );
-
+    const deletedIds = new Set(this.selectedComponentIds);
+    this.components = this.components.filter(comp => !deletedIds.has(comp.id));
+    this.wires = this.wires.filter(wire => !deletedIds.has(wire.startPin.componentId) && !deletedIds.has(wire.endPin.componentId));
     this.selectedComponentIds.clear();
     this.updateSpatialIndex();
-  }
-
-  createWire(start: WorldPin, end: WorldPin) {
-    const wireId = crypto.randomUUID();
-    const wire: Wire = {
-      id: wireId,
-      startPin: start,
-      endPin: end,
-      segments: [{
-        id: crypto.randomUUID(),
-        x1: start.x,
-        y1: start.y,
-        x2: end.x,
-        y2: end.y
-      }]
-    };
-    this.wires.push(wire);
-  }
-
-  // Call this in the render loop or mouseMove to keep wires updated 
-  // when components move (since pins are relative)
-  updateWirePositions() {
-    this.wires.forEach(wire => {
-      // Recalculate the world position of the pins
-      const startComp = this.components.find(c => c.id === wire.startPin.componentId);
-      const endComp = this.components.find(c => c.id === wire.endPin.componentId);
-
-      if (startComp && endComp) {
-        const sPin = startComp.definition.pins.find(p => p.number === wire.startPin.pinNumber)!;
-        const ePin = endComp.definition.pins.find(p => p.number === wire.endPin.pinNumber)!;
-
-        wire.startPin.x = startComp.x + sPin.x;
-        wire.startPin.y = startComp.y + sPin.y;
-        wire.endPin.x = endComp.x + ePin.x;
-        wire.endPin.y = endComp.y + ePin.y;
-
-        // Update the first segment (Pass 1: simple line)
-        if (wire.segments[0]) {
-          wire.segments[0].x1 = wire.startPin.x;
-          wire.segments[0].y1 = wire.startPin.y;
-          wire.segments[0].x2 = wire.endPin.x;
-          wire.segments[0].y2 = wire.endPin.y;
-        }
-      }
-    });
   }
 
   setSelected(id: string | null, multi: boolean = false) {
@@ -173,6 +104,50 @@ class SchematicStore {
   }
 
   clearSelection() { this.selectedComponentIds.clear(); }
+
+  createWire(start: WorldPin, end: WorldPin, providedSegments?: WireSegment[]) {
+    const segments = providedSegments || router.route(start, end, this.generateCostMap());
+    const finalSegments = segments.length > 0 ? segments : [{ id: crypto.randomUUID(), x1: start.x, y1: start.y, x2: end.x, y2: end.y }];
+    this.wires.push({ id: crypto.randomUUID(), startPin: start, endPin: end, segments: finalSegments });
+  }
+
+  generateCostMap(): Record<string, number> {
+    const costMap: Record<string, number> = {};
+    this.components.forEach(comp => {
+      for (let x = comp.x; x <= comp.x + comp.definition.width; x += 10) {
+        for (let y = comp.y; y <= comp.y + comp.definition.height; y += 10) {
+          costMap[`${x},${y}`] = 100;
+        }
+      }
+      comp.definition.pins.forEach(p => {
+        costMap[`${comp.x + p.x},${comp.y + p.y}`] = 200;
+      });
+    });
+    return costMap;
+  }
+
+  updateWirePositions() {
+    this.wires.forEach(wire => {
+      const startComp = this.components.find(c => c.id === wire.startPin.componentId);
+      const endComp = this.components.find(c => c.id === wire.endPin.componentId);
+      if (startComp && endComp) {
+        const sP = startComp.definition.pins.find(p => p.number === wire.startPin.pinNumber)!;
+        const eP = endComp.definition.pins.find(p => p.number === wire.endPin.pinNumber)!;
+        wire.startPin.x = startComp.x + sP.x; wire.startPin.y = startComp.y + sP.y;
+        wire.endPin.x = endComp.x + eP.x; wire.endPin.y = endComp.y + eP.y;
+        if (wire.segments.length > 0) {
+          wire.segments[0].x1 = wire.startPin.x; wire.segments[0].y1 = wire.startPin.y;
+        }
+        if (wire.segments.length > 1) {
+          const last = wire.segments.length - 1;
+          wire.segments[last].x2 = wire.endPin.x; wire.segments[last].y2 = wire.endPin.y;
+        } else if (wire.segments.length === 1) {
+          wire.segments[0].x1 = wire.startPin.x; wire.segments[0].y1 = wire.startPin.y;
+          wire.segments[0].x2 = wire.endPin.x; wire.segments[0].y2 = wire.endPin.y;
+        }
+      }
+    });
+  }
 
   onLibraryUpdate(cb: () => void) { this.listeners.push(cb); }
   notify() { this.listeners.forEach(cb => cb()); }

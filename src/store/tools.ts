@@ -1,8 +1,8 @@
 import { store } from './schematicStore.ts';
-import type { ToolInterface } from '../types/schematic.ts';
+import type { ToolInterface, WorldPin, WireSegment, ToolId } from '../types/schematic.ts';
 
 export class SelectionTool implements ToolInterface {
-  id = 'selection';
+  id: ToolId = 'selection';
   private isDragging = false;
   private lastMousePos = { x: 0, y: 0 };
 
@@ -11,7 +11,6 @@ export class SelectionTool implements ToolInterface {
       worldPos.x >= comp.x && worldPos.x <= comp.x + comp.definition.width &&
       worldPos.y >= comp.y && worldPos.y <= comp.y + comp.definition.height
     );
-
     if (store.selectedComponentIds.size > 0 && clickedSomething) {
       this.isDragging = true;
       this.lastMousePos = { ...worldPos };
@@ -27,9 +26,7 @@ export class SelectionTool implements ToolInterface {
     }
   }
 
-  onMouseUp() {
-    this.isDragging = false;
-  }
+  onMouseUp() { this.isDragging = false; }
 
   onClick(e: MouseEvent, worldPos: { x: number, y: number }) {
     const isMultiSelect = e.ctrlKey || e.metaKey;
@@ -37,7 +34,6 @@ export class SelectionTool implements ToolInterface {
       worldPos.x >= comp.x && worldPos.x <= comp.x + comp.definition.width &&
       worldPos.y >= comp.y && worldPos.y <= comp.y + comp.definition.height
     );
-
     if (clickedComp) {
       if (store.selectedComponentIds.has(clickedComp.id)) return;
       isMultiSelect ? store.toggleSelection(clickedComp.id) : store.setSelected(clickedComp.id, false);
@@ -61,17 +57,12 @@ export class SelectionTool implements ToolInterface {
 }
 
 export class PlacementTool implements ToolInterface {
-  id = 'component';
-  // The tool now tracks WHICH component it is currently placing
+  id: ToolId = 'component';
   public activeComponentId: string = 'resistor';
-
-  // Helper to get the actual definition from the library
-  get definition() {
-    return store.library.get(this.activeComponentId);
-  }
+  get definition() { return store.library.get(this.activeComponentId); }
 
   onClick(e: MouseEvent, worldPos: { x: number, y: number }) {
-    const def = this.definition; // Use local property
+    const def = this.definition;
     if (def) {
       store.addComponent(worldPos.x, worldPos.y, def);
       store.setTool('selection');
@@ -79,9 +70,8 @@ export class PlacementTool implements ToolInterface {
   }
 
   onDraw(ctx: CanvasRenderingContext2D) {
-    const def = this.definition; // Use local property
+    const def = this.definition;
     if (!def) return;
-
     const { x, y } = store.mousePos;
     ctx.save();
     ctx.globalAlpha = 0.5;
@@ -91,8 +81,18 @@ export class PlacementTool implements ToolInterface {
 }
 
 export class WiringTool implements ToolInterface {
-  id = 'wire';
+  id: ToolId = 'wire';
   private PIN_THRESHOLD = 15;
+  private previewSegments: WireSegment[] = [];
+  private isCalculating = false;
+  private worker = new Worker(new URL('../services/router.worker.ts', import.meta.url), { type: 'module' });
+
+  constructor() {
+    this.worker.onmessage = (e) => {
+      this.previewSegments = e.data;
+      this.isCalculating = false;
+    };
+  }
 
   private updatePinProximity(mousePos: { x: number, y: number }) {
     const nearby = store.spatialIndex.getNearbyPins(mousePos.x, mousePos.y);
@@ -117,25 +117,26 @@ export class WiringTool implements ToolInterface {
       if (endPin) {
         const start = store.pendingWire.startPin;
         if (!(endPin.componentId === start.componentId && endPin.pinNumber === start.pinNumber)) {
-          store.createWire(start, endPin);
+          store.createWire(start, endPin, this.previewSegments);
         }
       }
       store.pendingWire = null;
+      this.previewSegments = [];
     }
   }
 
   onDraw(ctx: CanvasRenderingContext2D) {
     const mousePos = store.mousePos;
-    const pin = this.updatePinProximity(mousePos);
-    if (pin) {
+    const hoveredPin = this.updatePinProximity(mousePos);
+    if (hoveredPin) {
       ctx.save();
       ctx.beginPath();
-      ctx.arc(pin.x, pin.y, 9, 0, Math.PI * 2);
+      ctx.arc(hoveredPin.x, hoveredPin.y, 9, 0, Math.PI * 2);
       ctx.strokeStyle = 'rgba(0, 0, 0, 0.6)';
       ctx.lineWidth = 1;
       ctx.stroke();
       ctx.beginPath();
-      ctx.arc(pin.x, pin.y, 7, 0, Math.PI * 2);
+      ctx.arc(hoveredPin.x, hoveredPin.y, 7, 0, Math.PI * 2);
       ctx.strokeStyle = '#FF8C00';
       ctx.lineWidth = 3;
       ctx.stroke();
@@ -143,14 +144,33 @@ export class WiringTool implements ToolInterface {
     }
 
     if (store.pendingWire) {
-      ctx.save();
-      ctx.beginPath();
-      ctx.strokeStyle = 'rgba(255, 140, 0, 0.6)';
-      ctx.setLineDash([5, 5]);
-      ctx.moveTo(store.pendingWire.startPin.x, store.pendingWire.startPin.y);
-      ctx.lineTo(mousePos.x, mousePos.y);
-      ctx.stroke();
-      ctx.restore();
+      const startPin = store.pendingWire.startPin;
+      const virtualEndPin: WorldPin = hoveredPin ? hoveredPin : {
+        componentId: 'virtual', pinNumber: '0', x: store.snap(mousePos.x), y: store.snap(mousePos.y)
+      };
+
+      if (!this.isCalculating) {
+        this.isCalculating = true;
+        this.worker.postMessage({
+          startPin,
+          endPin: virtualEndPin,
+          costMap: store.generateCostMap()
+        });
+      }
+
+      if (this.previewSegments.length > 0) {
+        ctx.save();
+        ctx.strokeStyle = hoveredPin ? 'rgba(255, 140, 0, 0.9)' : 'rgba(255, 140, 0, 0.4)';
+        ctx.lineWidth = 2;
+        if (!hoveredPin) ctx.setLineDash([5, 5]);
+        this.previewSegments.forEach(seg => {
+          ctx.beginPath();
+          ctx.moveTo(seg.x1, seg.y1);
+          ctx.lineTo(seg.x2, seg.y2);
+          ctx.stroke();
+        });
+        ctx.restore();
+      }
     }
   }
 }

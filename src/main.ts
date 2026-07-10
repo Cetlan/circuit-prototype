@@ -2,6 +2,8 @@ import './components/schematic-canvas';
 import './components/toolbar';
 import { store } from './store/schematicStore';
 
+store.init();
+
 document.getElementById('app')!.innerHTML = `
     <app-toolbar></app-toolbar>
     <schematic-canvas></schematic-canvas>
@@ -9,7 +11,7 @@ document.getElementById('app')!.innerHTML = `
 
 (async () => {
   await store.library.loadComponent('resistor', `
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 60" width="160" height="60">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 140 60" width="140" height="60">
   <!-- Resistor Trace -->
   <path
     d="M 0,30 L 30,30 L 35,10 L 45,50 L 55,10 L 65,50 L 75,10 L 85,50 L 95,10 L 105,50 L 110,30 L 140,30"
