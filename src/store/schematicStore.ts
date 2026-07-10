@@ -62,6 +62,8 @@ class SchematicStore {
   public components: ComponentInstance[] = [];
   public library = new ComponentLibrary();
 
+  public selectedComponentIds = new Set<string>();
+
   // --- MISSING METHODS START ---
   snap(value: number): number {
     return Math.round(value / this.gridSize) * this.gridSize;
@@ -86,6 +88,30 @@ class SchematicStore {
       y: this.snap(y),
       definition: def
     });
+  }
+
+  setSelected(id: string | null, multi: boolean = false) {
+    if (!multi) {
+      this.selectedComponentIds.clear();
+    }
+
+    if (id) {
+      this.selectedComponentIds.add(id);
+    } else if (!multi) {
+      this.selectedComponentIds.clear();
+    }
+  }
+
+  toggleSelection(id: string) {
+    if (this.selectedComponentIds.has(id)) {
+      this.selectedComponentIds.delete(id);
+    } else {
+      this.selectedComponentIds.add(id);
+    }
+  }
+
+  clearSelection() {
+    this.selectedComponentIds.clear();
   }
 
   private listeners: Array<() => void> = [];

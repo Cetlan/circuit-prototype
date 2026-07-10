@@ -43,10 +43,41 @@ export class SchematicCanvas extends LitElement {
   }
 
   handleClick(e: MouseEvent) {
-    const def = store.getActiveToolDefinition();
-    if (store.activeTool === 'component' && def) {
-      store.addComponent(this.mousePos.x, this.mousePos.y, def);
-      store.setTool('selection');
+    if (store.activeTool === 'component') {
+      const def = store.getActiveToolDefinition();
+      if (def) {
+        store.addComponent(this.mousePos.x, this.mousePos.y, def);
+        store.setTool('selection');
+      }
+    } else if (store.activeTool === 'selection') {
+      this.handleSelectionClick(e);
+    }
+  }
+
+  private handleSelectionClick(e: MouseEvent) {
+    const isMultiSelect = e.ctrlKey || e.metaKey;
+
+    const clickedComp = [...store.components].reverse().find(comp => {
+      const { width, height } = comp.definition;
+      return (
+        this.mousePos.x >= comp.x &&
+        this.mousePos.x <= comp.x + width &&
+        this.mousePos.y >= comp.y &&
+        this.mousePos.y <= comp.y + height
+      );
+    });
+
+    if (clickedComp) {
+      if (isMultiSelect) {
+        store.toggleSelection(clickedComp.id);
+      } else {
+        store.setSelected(clickedComp.id, false);
+      }
+    } else {
+      // If we click empty space, clear selection UNLESS we are holding Ctrl
+      if (!isMultiSelect) {
+        store.clearSelection();
+      }
     }
   }
 
@@ -55,20 +86,27 @@ export class SchematicCanvas extends LitElement {
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     this.drawGrid();
 
-    // Draw placed components
+    // 1. Draw components
     store.components.forEach(comp => {
-      const { img, pins } = comp.definition;
-      this.ctx.drawImage(img, comp.x, comp.y);
-
-      // OPTIONAL: Visual check - draw a tiny red dot on every pin
-      this.ctx.fillStyle = 'red';
-      pins.forEach(pin => {
-        this.ctx.beginPath();
-        this.ctx.arc(comp.x + pin.x, comp.y + pin.y, 2, 0, Math.PI * 2);
-        this.ctx.fill();
-      });
+      this.ctx.drawImage(comp.definition.img, comp.x, comp.y);
     });
 
+    // 2. Draw Multi-Selection Highlights
+    if (store.selectedComponentIds.size > 0) {
+      this.ctx.strokeStyle = '#007bff';
+      this.ctx.lineWidth = 2;
+      this.ctx.setLineDash([5, 5]);
+
+      store.components.forEach(comp => {
+        if (store.selectedComponentIds.has(comp.id)) {
+          const { width, height } = comp.definition;
+          this.ctx.strokeRect(comp.x - 2, comp.y - 2, width + 4, height + 4);
+        }
+      });
+      this.ctx.setLineDash([]);
+    }
+
+    // 3. Draw Ghost
     const ghostDef = store.getActiveToolDefinition();
     if (ghostDef) {
       const snappedX = store.snap(this.mousePos.x);
@@ -78,7 +116,6 @@ export class SchematicCanvas extends LitElement {
       this.ctx.globalAlpha = 1.0;
     }
   }
-
   renderLoop() {
     this.draw();
     requestAnimationFrame(() => this.renderLoop());
