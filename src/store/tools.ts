@@ -53,7 +53,7 @@ export class SelectionTool implements ToolInterface {
     const isMultiSelect = e.ctrlKey || e.metaKey;
     const clickedComp = [...store.components].reverse().find(comp =>
       worldPos.x >= comp.x && worldPos.x <= comp.x + comp.definition.width &&
-      worldPos.y >= comp.y && worldPos.y <= comp.definition.height
+      worldPos.y >= comp.y && worldPos.y <= comp.y + comp.definition.height
     );
     if (clickedComp) {
       if (store.selectedComponentIds.has(clickedComp.id)) return;

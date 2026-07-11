@@ -34,8 +34,19 @@ class ComponentLibrary {
     const serializer = new XMLSerializer();
     const modifiedSvgString = serializer.serializeToString(svgDoc);
 
-    const width = parseFloat(svgElement.getAttribute('width') || '0');
-    const height = parseFloat(svgElement.getAttribute('height') || '0');
+    let width = parseFloat(svgElement.getAttribute('width') || '0');
+    let height = parseFloat(svgElement.getAttribute('height') || '0');
+
+    if (width === 0 || height === 0) {
+      const viewBox = svgElement.getAttribute('viewBox');
+      if (viewBox) {
+        const parts = viewBox.split(/\s+/).filter(Boolean).map(parseFloat);
+        if (parts.length === 4) {
+          if (width === 0) width = parts[2];
+          if (height === 0) height = parts[3];
+        }
+      }
+    }
     const pinElements = svgDoc.querySelectorAll('[data-pin-number]');
     const pins: Pin[] = Array.from(pinElements).map(el => {
       const circle = el as SVGCircleElement;
