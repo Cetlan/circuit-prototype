@@ -17,6 +17,12 @@ export class SchematicCanvas extends LitElement {
     window.addEventListener('resize', () => this.resize());
     window.addEventListener('keydown', (e) => {
       if (e.key === 'Delete' || e.key === 'Backspace') store.deleteSelected();
+      if (e.key === 'Escape') {
+        // TODO: Implement a more comprehensive tool notification system 
+        // so tools can perform their own cleanup when disabled.
+        store.setTool('selection');
+        store.pendingWire = null;
+      }
     });
     this.renderLoop();
   }
