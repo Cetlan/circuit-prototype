@@ -58,7 +58,10 @@ class SchematicStore {
   }
 
   snap(value: number): number { return Math.round(value / this.gridSize) * this.gridSize; }
-  setTool(toolId: ToolId) { this.activeTool = this.tools[toolId]; }
+  setTool(toolId: ToolId) {
+    this.activeTool = this.tools[toolId];
+    this.notify();
+  }
 
   updateSpatialIndex() {
     this.spatialIndex.clear();

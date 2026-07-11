@@ -9,7 +9,9 @@ export class AppToolbar extends LitElement {
   @state() private activeToolId: string = store.activeTool.id;
 
   firstUpdated() {
-    store.onLibraryUpdate(() => this.requestUpdate());
+    store.onLibraryUpdate(() => {
+      this.activeToolId = store.activeTool.id;
+    });
   }
 
   setTool(toolId: ToolId) {
@@ -24,12 +26,10 @@ export class AppToolbar extends LitElement {
 
     return html`
             <div class="toolbar">
-                <button class="tool-btn ${this.activeToolId === 'selection' ? 'active' : ''}" @click=${() => this.setTool('selection')}>Selection Tool</button>
                 <button class="tool-btn ${this.activeToolId === 'component' ? 'active' : ''}" @click=${() => this.setTool('component')}>
                     Component Tool
                     <div class="preview-box">${def ? html`<img src=${def.img.src} />` : html`<span>...</span>`}</div>
                 </button>
-                <button class="tool-btn ${this.activeToolId === 'wire' ? 'active' : ''}" @click=${() => this.setTool('wire')}>Wiring Tool</button>
             </div>
         `;
   }
