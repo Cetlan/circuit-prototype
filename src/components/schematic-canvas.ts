@@ -51,7 +51,14 @@ export class SchematicCanvas extends LitElement {
 
   handleClick(e: MouseEvent) {
     const worldPos = this.getWorldPos(e);
-    store.activeTool.onClick?.(e, worldPos);
+    const result = store.activeTool.onClick?.(e, worldPos);
+
+    if (result?.status === 'completed') {
+      store.setTool('selection');
+    } else if (result?.status === 'pinClicked') {
+      store.setTool('wire');
+      store.pendingWire = { startPin: result.pin, viaPoints: [], currentPos: worldPos };
+    }
   }
 
   draw() {

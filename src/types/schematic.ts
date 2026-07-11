@@ -43,11 +43,16 @@ export interface Wire {
   segments: WireSegment[];
 }
 
+export type ToolResult =
+  | { status: 'none' }
+  | { status: 'completed' }
+  | { status: 'pinClicked'; pin: WorldPin };
+
 export interface ToolInterface {
   id: ToolId;
-  onMouseDown?: (e: MouseEvent, worldPos: { x: number, y: number }) => void;
-  onMouseMove?: (e: MouseEvent, worldPos: { x: number, y: number }) => void;
-  onMouseUp?: (e: MouseEvent, worldPos: { x: number, y: number }) => void;
-  onClick?: (e: MouseEvent, worldPos: { x: number, y: number }) => void;
+  onMouseDown?: (e: MouseEvent, worldPos: { x: number, y: number }) => ToolResult | void;
+  onMouseMove?: (e: MouseEvent, worldPos: { x: number, y: number }) => ToolResult | void;
+  onMouseUp?: (e: MouseEvent, worldPos: { x: number, y: number }) => ToolResult | void;
+  onClick?: (e: MouseEvent, worldPos: { x: number, y: number }) => ToolResult | void;
   onDraw?: (ctx: CanvasRenderingContext2D) => void;
 }

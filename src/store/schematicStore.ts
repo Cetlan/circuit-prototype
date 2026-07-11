@@ -41,7 +41,7 @@ class SchematicStore {
   public components: ComponentInstance[] = [];
   public selectedComponentIds = new Set<string>();
   public wires: Wire[] = [];
-  public pendingWire: { startPin: WorldPin, currentPos: { x: number, y: number } } | null = null;
+  public pendingWire: { startPin: WorldPin, viaPoints: { x: number, y: number }[], currentPos: { x: number, y: number } } | null = null;
   public library = new ComponentLibrary();
   public spatialIndex = new SpatialIndex();
   public mousePos = { x: 0, y: 0 };
