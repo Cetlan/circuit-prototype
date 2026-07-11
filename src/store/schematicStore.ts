@@ -93,6 +93,68 @@ class SchematicStore {
   }
 
   snap(value: number): number { return Math.round(value / this.gridSize) * this.gridSize; }
+
+  getCurrentDimensions(comp: ComponentInstance): { width: number, height: number } {
+    const { width, height } = comp.definition;
+    return comp.rotation % 180 === 0 ? { width, height } : { width: height, height: width };
+  }
+
+  getComponentCenter(comp: ComponentInstance): { x: number, y: number } {
+    const { width, height } = this.getCurrentDimensions(comp);
+    return { x: comp.x + width / 2, y: comp.y + height / 2 };
+  }
+
+  getPinWorldPos(comp: ComponentInstance, pin: Pin): { x: number, y: number } {
+    const center = this.getComponentCenter(comp);
+    const localX = pin.x - comp.definition.width / 2;
+    const localY = pin.y - comp.definition.height / 2;
+
+    let rotatedX = localX;
+    let rotatedY = localY;
+
+    const angle = comp.rotation % 360;
+    if (angle === 90) {
+      rotatedX = -localY;
+      rotatedY = localX;
+    } else if (angle === 180) {
+      rotatedX = -localX;
+      rotatedY = -localY;
+    } else if (angle === 270) {
+      rotatedX = localY;
+      rotatedY = -localX;
+    }
+
+    return { x: center.x + rotatedX, y: center.y + rotatedY };
+  }
+
+  rotateSelected() {
+    let moved = false;
+    this.components.forEach(comp => {
+      if (this.selectedComponentIds.has(comp.id)) {
+        const center = this.getComponentCenter(comp);
+        const px = this.snap(center.x);
+        const py = this.snap(center.y);
+
+        // Rotate center around (px, py)
+        const nextCenterX = px - (center.y - py);
+        const nextCenterY = py + (center.x - px);
+
+        const nextRotation = (comp.rotation + 90) % 360;
+        const { width: nextW, height: nextH } = this.getCurrentDimensions({ ...comp, rotation: nextRotation });
+
+        comp.x = nextCenterX - nextW / 2;
+        comp.y = nextCenterY - nextH / 2;
+        comp.rotation = nextRotation;
+        moved = true;
+      }
+    });
+    if (moved) {
+      this.updateSpatialIndex();
+      this.updateWirePositions();
+      this.notify();
+    }
+  }
+
   setTool(toolId: ToolId) {
     this.activeTool = this.tools[toolId];
     this.notify();
@@ -102,13 +164,14 @@ class SchematicStore {
     this.spatialIndex.clear();
     this.components.forEach(comp => {
       comp.definition.pins.forEach(pin => {
-        this.spatialIndex.addPin({ componentId: comp.id, pinNumber: pin.number, x: comp.x + pin.x, y: comp.y + pin.y });
+        const pos = this.getPinWorldPos(comp, pin);
+        this.spatialIndex.addPin({ componentId: comp.id, pinNumber: pin.number, x: pos.x, y: pos.y });
       });
     });
   }
 
   addComponent(x: number, y: number, def: ComponentDefinition) {
-    this.components.push({ id: crypto.randomUUID(), x: this.snap(x), y: this.snap(y), definition: def });
+    this.components.push({ id: crypto.randomUUID(), x: this.snap(x), y: this.snap(y), rotation: 0, definition: def });
     this.updateSpatialIndex();
   }
 
@@ -152,13 +215,16 @@ class SchematicStore {
   generateCostMap(): Record<string, number> {
     const costMap: Record<string, number> = {};
     this.components.forEach(comp => {
-      for (let x = comp.x; x <= comp.x + comp.definition.width; x += 10) {
-        for (let y = comp.y; y <= comp.y + comp.definition.height; y += 10) {
+      const w = (comp.rotation % 180 === 0) ? comp.definition.width : comp.definition.height;
+      const h = (comp.rotation % 180 === 0) ? comp.definition.height : comp.definition.width;
+      for (let x = comp.x; x <= comp.x + w; x += 10) {
+        for (let y = comp.y; y <= comp.y + h; y += 10) {
           costMap[`${x},${y}`] = 100;
         }
       }
       comp.definition.pins.forEach(p => {
-        costMap[`${comp.x + p.x},${comp.y + p.y}`] = 200;
+        const pos = this.getPinWorldPos(comp, p);
+        costMap[`${pos.x},${pos.y}`] = 200;
       });
     });
     return costMap;
@@ -171,8 +237,12 @@ class SchematicStore {
       if (startComp && endComp) {
         const sP = startComp.definition.pins.find(p => p.number === wire.startPin.pinNumber)!;
         const eP = endComp.definition.pins.find(p => p.number === wire.endPin.pinNumber)!;
-        wire.startPin.x = startComp.x + sP.x; wire.startPin.y = startComp.y + sP.y;
-        wire.endPin.x = endComp.x + eP.x; wire.endPin.y = endComp.y + eP.y;
+
+        const startPos = this.getPinWorldPos(startComp, sP);
+        const endPos = this.getPinWorldPos(endComp, eP);
+
+        wire.startPin.x = startPos.x; wire.startPin.y = startPos.y;
+        wire.endPin.x = endPos.x; wire.endPin.y = endPos.y;
         if (wire.segments.length > 0) {
           wire.segments[0].x1 = wire.startPin.x; wire.segments[0].y1 = wire.startPin.y;
         }

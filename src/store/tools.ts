@@ -18,10 +18,11 @@ export class SelectionTool implements ToolInterface {
   }
 
   onMouseDown(e: MouseEvent, worldPos: { x: number, y: number }) {
-    const clickedSomething = store.components.some(comp =>
-      worldPos.x >= comp.x && worldPos.x <= comp.x + comp.definition.width &&
-      worldPos.y >= comp.y && worldPos.y <= comp.y + comp.definition.height
-    );
+    const clickedSomething = store.components.some(comp => {
+      const { width, height } = store.getCurrentDimensions(comp);
+      return worldPos.x >= comp.x && worldPos.x <= comp.x + width &&
+        worldPos.y >= comp.y && worldPos.y <= comp.y + height;
+    });
     if (store.selectedComponentIds.size > 0 && clickedSomething) {
       this.isDragging = true;
       this.lastMousePos = { ...worldPos };
@@ -51,10 +52,11 @@ export class SelectionTool implements ToolInterface {
     }
 
     const isMultiSelect = e.ctrlKey || e.metaKey;
-    const clickedComp = [...store.components].reverse().find(comp =>
-      worldPos.x >= comp.x && worldPos.x <= comp.x + comp.definition.width &&
-      worldPos.y >= comp.y && worldPos.y <= comp.y + comp.definition.height
-    );
+    const clickedComp = [...store.components].reverse().find(comp => {
+      const { width, height } = store.getCurrentDimensions(comp);
+      return worldPos.x >= comp.x && worldPos.x <= comp.x + width &&
+        worldPos.y >= comp.y && worldPos.y <= comp.y + height;
+    });
     if (clickedComp) {
       if (store.selectedComponentIds.has(clickedComp.id)) return;
       isMultiSelect ? store.toggleSelection(clickedComp.id) : store.setSelected(clickedComp.id, false);
@@ -87,7 +89,8 @@ export class SelectionTool implements ToolInterface {
     ctx.setLineDash([5, 5]);
     store.components.forEach(comp => {
       if (store.selectedComponentIds.has(comp.id)) {
-        ctx.strokeRect(comp.x - 2, comp.y - 2, comp.definition.width + 4, comp.definition.height + 4);
+        const { width, height } = store.getCurrentDimensions(comp);
+        ctx.strokeRect(comp.x - 2, comp.y - 2, width + 4, height + 4);
       }
     });
     ctx.restore();

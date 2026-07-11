@@ -18,6 +18,7 @@ export interface ComponentInstance {
   id: string;
   x: number;
   y: number;
+  rotation: number;
   definition: ComponentDefinition;
 }
 

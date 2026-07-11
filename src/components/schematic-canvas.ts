@@ -17,6 +17,7 @@ export class SchematicCanvas extends LitElement {
     window.addEventListener('resize', () => this.resize());
     window.addEventListener('keydown', (e) => {
       if (e.key === 'Delete' || e.key === 'Backspace') store.deleteSelected();
+      if (e.key === 'r' || e.key === 'R') store.rotateSelected();
       if (e.key === 'Escape') {
         // TODO: Implement a more comprehensive tool notification system 
         // so tools can perform their own cleanup when disabled.
@@ -93,7 +94,17 @@ export class SchematicCanvas extends LitElement {
       connectedPins.add(`${wire.endPin.componentId}:${wire.endPin.pinNumber}`);
     });
 
-    store.components.forEach(comp => this.ctx.drawImage(comp.definition.img, comp.x, comp.y));
+    store.components.forEach(comp => {
+      const { width: w, height: h, img } = comp.definition;
+      const centerX = comp.x + (comp.rotation % 180 === 0 ? w : h) / 2;
+      const centerY = comp.y + (comp.rotation % 180 === 0 ? h : w) / 2;
+
+      this.ctx.save();
+      this.ctx.translate(centerX, centerY);
+      this.ctx.rotate((comp.rotation * Math.PI) / 180);
+      this.ctx.drawImage(img, -w / 2, -h / 2);
+      this.ctx.restore();
+    });
 
     // 2. Draw red dots for unconnected pins
     this.ctx.save();
@@ -101,8 +112,9 @@ export class SchematicCanvas extends LitElement {
     store.components.forEach(comp => {
       comp.definition.pins.forEach(pin => {
         if (!connectedPins.has(`${comp.id}:${pin.number}`)) {
+          const pos = store.getPinWorldPos(comp, pin);
           this.ctx.beginPath();
-          this.ctx.arc(comp.x + pin.x, comp.y + pin.y, 2, 0, Math.PI * 2);
+          this.ctx.arc(pos.x, pos.y, 2, 0, Math.PI * 2);
           this.ctx.fill();
         }
       });
