@@ -104,6 +104,22 @@ export class SchematicCanvas extends LitElement {
       this.ctx.rotate((comp.rotation * Math.PI) / 180);
       this.ctx.drawImage(img, -w / 2, -h / 2);
       this.ctx.restore();
+
+      // Draw labels
+      this.ctx.save();
+      this.ctx.fillStyle = '#333';
+      this.ctx.font = '30px sans-serif';
+      this.ctx.textAlign = 'center';
+      this.ctx.textBaseline = 'middle';
+
+      const halfHeight = (comp.rotation % 180 === 0 ? h : w) / 2;
+      const padding = 20;
+
+      // Refdes above: position is center of text, so we subtract half font height (15)
+      this.ctx.fillText(comp.refdes, centerX, centerY - halfHeight - padding - 15);
+      // Value below: position is center of text, so we add half font height (15)
+      this.ctx.fillText(comp.value, centerX, centerY + halfHeight + padding + 15);
+      this.ctx.restore();
     });
 
     // 2. Draw red dots for unconnected pins

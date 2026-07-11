@@ -170,8 +170,16 @@ class SchematicStore {
     });
   }
 
-  addComponent(x: number, y: number, def: ComponentDefinition) {
-    this.components.push({ id: crypto.randomUUID(), x: this.snap(x), y: this.snap(y), rotation: 0, definition: def });
+  addComponent(x: number, y: number, def: ComponentDefinition, refdes = 'R1', value = '1K') {
+    this.components.push({
+      id: crypto.randomUUID(),
+      x: this.snap(x),
+      y: this.snap(y),
+      rotation: 0,
+      definition: def,
+      refdes,
+      value
+    });
     this.updateSpatialIndex();
   }
 

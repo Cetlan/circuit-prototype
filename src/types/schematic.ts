@@ -20,6 +20,8 @@ export interface ComponentInstance {
   y: number;
   rotation: number;
   definition: ComponentDefinition;
+  refdes: string;
+  value: string;
 }
 
 export interface WorldPin {
