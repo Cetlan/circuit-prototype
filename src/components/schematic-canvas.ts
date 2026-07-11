@@ -2,6 +2,7 @@ import { LitElement, html, css } from 'lit';
 import { customElement, query } from 'lit/decorators.js';
 import { store } from '../store/schematicStore.ts';
 import { CanvasUtils } from '../utils/canvasUtils.ts';
+import { defaultLabelPlacementStrategy } from '../utils/labelPlacement.ts';
 
 @customElement('schematic-canvas')
 export class SchematicCanvas extends LitElement {
@@ -109,16 +110,17 @@ export class SchematicCanvas extends LitElement {
       this.ctx.save();
       this.ctx.fillStyle = '#333';
       this.ctx.font = '30px sans-serif';
-      this.ctx.textAlign = 'center';
       this.ctx.textBaseline = 'middle';
 
-      const halfHeight = (comp.rotation % 180 === 0 ? h : w) / 2;
-      const padding = 20;
+      const refdesPos = defaultLabelPlacementStrategy.calculateRefdesPosition(comp, centerX, centerY);
+      this.ctx.textAlign = refdesPos.textAlign;
 
-      // Refdes above: position is center of text, so we subtract half font height (15)
-      this.ctx.fillText(comp.refdes, centerX, centerY - halfHeight - padding - 15);
-      // Value below: position is center of text, so we add half font height (15)
-      this.ctx.fillText(comp.value, centerX, centerY + halfHeight + padding + 15);
+      this.ctx.fillText(comp.refdes, refdesPos.x, refdesPos.y);
+
+      const valuePos = defaultLabelPlacementStrategy.calculateValuePosition(comp, centerX, centerY);
+      this.ctx.textAlign = valuePos.textAlign;
+      this.ctx.fillText(comp.value, valuePos.x, valuePos.y);
+
       this.ctx.restore();
     });
 

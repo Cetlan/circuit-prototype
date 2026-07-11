@@ -2,6 +2,7 @@ import type { ToolId, Pin, ComponentDefinition, ComponentInstance, WorldPin, Wir
 import { SpatialIndex } from './spatialIndex.ts';
 import { router } from '../services/router.ts';
 import { PlacementTool, SelectionTool, WiringTool } from './tools.ts';
+import { defaultLabelPlacementStrategy } from '../utils/labelPlacement.ts';
 
 class ComponentLibrary {
   private cache = new Map<string, ComponentDefinition>();
@@ -75,6 +76,7 @@ class SchematicStore {
   private gridSize = 10;
   public components: ComponentInstance[] = [];
   public selectedComponentIds = new Set<string>();
+  public selectedLabels = new Set<string>(); // Format: "compId:refdes" or "compId:value"
   public wires: Wire[] = [];
   public pendingWire: { startPin: WorldPin, viaPoints: { x: number, y: number }[], currentPos: { x: number, y: number } } | null = null;
   public library = new ComponentLibrary();
@@ -145,6 +147,14 @@ class SchematicStore {
         comp.x = nextCenterX - nextW / 2;
         comp.y = nextCenterY - nextH / 2;
         comp.rotation = nextRotation;
+
+        if (comp.refdesOffset) {
+          comp.refdesOffset = defaultLabelPlacementStrategy.rotateOffset(comp.refdesOffset);
+        }
+        if (comp.valueOffset) {
+          comp.valueOffset = defaultLabelPlacementStrategy.rotateOffset(comp.valueOffset);
+        }
+
         moved = true;
       }
     });
@@ -195,6 +205,18 @@ class SchematicStore {
     if (moved) this.updateSpatialIndex();
   }
 
+  updateLabelOffset(compId: string, label: 'refdes' | 'value', dx: number, dy: number) {
+    const comp = this.components.find(c => c.id === compId);
+    if (!comp) return;
+
+    if (label === 'refdes') {
+      comp.refdesOffset = { x: (comp.refdesOffset?.x || 0) + dx, y: (comp.refdesOffset?.y || 0) + dy };
+    } else {
+      comp.valueOffset = { x: (comp.valueOffset?.x || 0) + dx, y: (comp.valueOffset?.y || 0) + dy };
+    }
+    this.notify();
+  }
+
   deleteSelected() {
     const deletedIds = new Set(this.selectedComponentIds);
     this.components = this.components.filter(comp => !deletedIds.has(comp.id));
@@ -212,7 +234,20 @@ class SchematicStore {
     this.selectedComponentIds.has(id) ? this.selectedComponentIds.delete(id) : this.selectedComponentIds.add(id);
   }
 
-  clearSelection() { this.selectedComponentIds.clear(); }
+  clearSelection() {
+    this.selectedComponentIds.clear();
+    this.selectedLabels.clear();
+  }
+
+  setLabelSelected(compId: string, type: 'refdes' | 'value', multi: boolean = false) {
+    if (!multi) this.selectedLabels.clear();
+    this.selectedLabels.add(`${compId}:${type}`);
+  }
+
+  toggleLabelSelection(compId: string, type: 'refdes' | 'value') {
+    const key = `${compId}:${type}`;
+    this.selectedLabels.has(key) ? this.selectedLabels.delete(key) : this.selectedLabels.add(key);
+  }
 
   createWire(start: WorldPin, end: WorldPin, providedSegments?: WireSegment[]) {
     const segments = providedSegments || router.route(start, end, this.generateCostMap());

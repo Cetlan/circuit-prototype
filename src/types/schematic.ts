@@ -22,6 +22,8 @@ export interface ComponentInstance {
   definition: ComponentDefinition;
   refdes: string;
   value: string;
+  refdesOffset?: { x: number, y: number };
+  valueOffset?: { x: number, y: number };
 }
 
 export interface WorldPin {
