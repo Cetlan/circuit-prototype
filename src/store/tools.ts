@@ -205,7 +205,7 @@ export class WiringTool implements ToolInterface {
 
       if (this.previewSegments.length > 0) {
         ctx.save();
-        ctx.strokeStyle = hoveredPin ? 'rgba(255, 140, 0, 0.9)' : 'rgba(255, 140, 0, 0.4)';
+        ctx.strokeStyle = hoveredPin ? 'rgba(5, 150, 105, 0.9)' : 'rgba(5, 150, 105, 0.4)';
         ctx.lineWidth = 2;
         if (!hoveredPin) ctx.setLineDash([5, 5]);
         this.previewSegments.forEach(seg => {

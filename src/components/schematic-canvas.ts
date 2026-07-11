@@ -68,7 +68,7 @@ export class SchematicCanvas extends LitElement {
     CanvasUtils.drawGrid(this.ctx, this.canvas.width, this.canvas.height);
 
     this.ctx.save();
-    this.ctx.strokeStyle = '#2c3e50';
+    this.ctx.strokeStyle = '#059669';
     this.ctx.lineWidth = 2;
     store.wires.forEach(wire => {
       wire.segments.forEach(seg => {
@@ -80,7 +80,29 @@ export class SchematicCanvas extends LitElement {
     });
     this.ctx.restore();
 
+    // 1. Identify all connected pins
+    const connectedPins = new Set<string>();
+    store.wires.forEach(wire => {
+      connectedPins.add(`${wire.startPin.componentId}:${wire.startPin.pinNumber}`);
+      connectedPins.add(`${wire.endPin.componentId}:${wire.endPin.pinNumber}`);
+    });
+
     store.components.forEach(comp => this.ctx.drawImage(comp.definition.img, comp.x, comp.y));
+
+    // 2. Draw red dots for unconnected pins
+    this.ctx.save();
+    this.ctx.fillStyle = 'red';
+    store.components.forEach(comp => {
+      comp.definition.pins.forEach(pin => {
+        if (!connectedPins.has(`${comp.id}:${pin.number}`)) {
+          this.ctx.beginPath();
+          this.ctx.arc(comp.x + pin.x, comp.y + pin.y, 2, 0, Math.PI * 2);
+          this.ctx.fill();
+        }
+      });
+    });
+    this.ctx.restore();
+
     store.activeTool.onDraw?.(this.ctx);
   }
 

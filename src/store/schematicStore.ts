@@ -5,12 +5,35 @@ import { PlacementTool, SelectionTool, WiringTool } from './tools.ts';
 
 class ComponentLibrary {
   private cache = new Map<string, ComponentDefinition>();
-  async loadComponent(id: string, svgString: string): Promise<ComponentDefinition> {
+  async loadComponent(id: string, svgString: string, colorOverrides?: Record<string, string>): Promise<ComponentDefinition> {
     if (this.cache.has(id)) return this.cache.get(id)!;
+
+    const DEFAULT_COLOR = '#333333';
     const parser = new DOMParser();
     const svgDoc = parser.parseFromString(svgString, 'image/svg+xml');
     const svgElement = svgDoc.querySelector('svg');
     if (!svgElement) throw new Error(`Invalid SVG for component ${id}`);
+
+    // Override colors
+    const allElements = svgDoc.querySelectorAll('*');
+    allElements.forEach(el => {
+      const attrs = ['fill', 'stroke'];
+      attrs.forEach(attr => {
+        const val = el.getAttribute(attr);
+        if (val && val !== 'none') {
+          if (colorOverrides && colorOverrides[val]) {
+            el.setAttribute(attr, colorOverrides[val]);
+          } else if (!colorOverrides) {
+            // If no specific overrides map is provided, apply default charcoal to everything
+            el.setAttribute(attr, DEFAULT_COLOR);
+          }
+        }
+      });
+    });
+
+    const serializer = new XMLSerializer();
+    const modifiedSvgString = serializer.serializeToString(svgDoc);
+
     const width = parseFloat(svgElement.getAttribute('width') || '0');
     const height = parseFloat(svgElement.getAttribute('height') || '0');
     const pinElements = svgDoc.querySelectorAll('[data-pin-number]');
@@ -18,6 +41,7 @@ class ComponentLibrary {
       const circle = el as SVGCircleElement;
       return { number: circle.getAttribute('data-pin-number') || '?', x: parseFloat(circle.getAttribute('cx') || '0'), y: parseFloat(circle.getAttribute('cy') || '0') };
     }) as Pin[];
+
     return new Promise((resolve, reject) => {
       const img = new Image();
       img.onload = () => {
@@ -26,7 +50,7 @@ class ComponentLibrary {
         resolve(def);
       };
       img.onerror = reject;
-      img.src = `data:image/svg+xml;base64,${btoa(svgString)}`;
+      img.src = `data:image/svg+xml;base64,${btoa(modifiedSvgString)}`;
     });
   }
   get(id: string) { return this.cache.get(id); }
