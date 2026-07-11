@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 140 60" width="140" height="60">
+  <!-- Leads -->
+  <line x1="0" y1="30" x2="30" y2="30" stroke="#000000" stroke-width="2" />
+  <line x1="90" y1="30" x2="120" y2="30" stroke="#000000" stroke-width="2" />
+  <!-- Coils -->
+  <path d="M 30,30 A 7.5,7.5 0 0,1 45,30 A 7.5,7.5 0 0,1 60,30 A 7.5,7.5 0 0,1 75,30 A 7.5,7.5 0 0,1 90,30" fill="none" stroke="#000000" stroke-width="2" stroke-linecap="round" />
+  <!-- Invisible Pins -->
+  <circle cx="0" cy="30" r="5" fill="none" stroke="none" opacity="0" data-pin-number="1" />
+  <circle cx="120" cy="30" r="5" fill="none" stroke="none" opacity="0" data-pin-number="2" />
+</svg>

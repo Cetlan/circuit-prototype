@@ -10,6 +10,7 @@ class ComponentLibrary {
     if (this.cache.has(id)) return this.cache.get(id)!;
 
     const DEFAULT_COLOR = '#333333';
+
     const parser = new DOMParser();
     const svgDoc = parser.parseFromString(svgString, 'image/svg+xml');
     const svgElement = svgDoc.querySelector('svg');
@@ -62,10 +63,19 @@ class ComponentLibrary {
         resolve(def);
       };
       img.onerror = reject;
-      img.src = `data:image/svg+xml;base64,${btoa(modifiedSvgString)}`;
+      img.src = `data:image/svg+xml;utf8,${encodeURIComponent(modifiedSvgString)}`;
     });
   }
+
+  async loadComponentFromFile(id: string, path: string, colorOverrides?: Record<string, string>): Promise<ComponentDefinition> {
+    const response = await fetch(path);
+    if (!response.ok) throw new Error(`Failed to fetch SVG for component ${id} from ${path}`);
+    const svgString = await response.text();
+    return this.loadComponent(id, svgString, colorOverrides);
+  }
+
   get(id: string) { return this.cache.get(id); }
+  getIds() { return Array.from(this.cache.keys()); }
 }
 
 class SchematicStore {

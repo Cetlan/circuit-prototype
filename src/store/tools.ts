@@ -211,6 +211,11 @@ export class PlacementTool implements ToolInterface {
   public activeComponentId: string = 'resistor';
   get definition() { return store.library.get(this.activeComponentId); }
 
+  setComponent(id: string) {
+    this.activeComponentId = id;
+    store.notify();
+  }
+
   onClick(e: MouseEvent, worldPos: { x: number, y: number }) {
     const def = this.definition;
     if (def) {
