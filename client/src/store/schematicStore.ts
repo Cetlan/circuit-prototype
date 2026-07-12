@@ -1,7 +1,9 @@
 import type { ToolId, Pin, ComponentDefinition, ComponentInstance, WorldPin, Wire, WireSegment, ToolInterface } from '../types/schematic.ts';
 import { SpatialIndex } from './spatialIndex.ts';
 import { router } from '../services/router.ts';
-import { PlacementTool, SelectionTool, WiringTool } from './tools.ts';
+import { WiringTool } from './tools/WiringTool.ts';
+import { PlacementTool } from './tools/PlacementTool.ts';
+import { SelectionTool } from './tools/SelectionTool.ts';
 import { defaultLabelPlacementStrategy } from '../utils/labelPlacement.ts';
 
 class ComponentLibrary {
@@ -203,16 +205,24 @@ class SchematicStore {
     this.updateSpatialIndex();
   }
 
-  moveSelected(dx: number, dy: number) {
-    let moved = false;
+  moveSelected(dx: number, dy: number): boolean {
+    let anyMoved = false;
     this.components.forEach(comp => {
       if (this.selectedComponentIds.has(comp.id)) {
-        comp.x = this.snap(comp.x + dx);
-        comp.y = this.snap(comp.y + dy);
-        moved = true;
+        const newX = this.snap(comp.x + dx);
+        const newY = this.snap(comp.y + dy);
+        if (newX !== comp.x || newY !== comp.y) {
+          comp.x = newX;
+          comp.y = newY;
+          anyMoved = true;
+        }
       }
     });
-    if (moved) this.updateSpatialIndex();
+    if (anyMoved) {
+      this.updateSpatialIndex();
+      this.notify();
+    }
+    return anyMoved;
   }
 
   updateLabelOffset(compId: string, label: 'refdes' | 'value', dx: number, dy: number) {

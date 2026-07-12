@@ -2,7 +2,7 @@ import { LitElement, html, css } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import { store } from '../store/schematicStore.ts';
 import type { ToolId } from '../types/schematic.ts';
-import { PlacementTool } from '../store/tools.ts';
+import { PlacementTool } from '../store/tools/PlacementTool.ts';
 
 @customElement('app-toolbar')
 export class AppToolbar extends LitElement {
