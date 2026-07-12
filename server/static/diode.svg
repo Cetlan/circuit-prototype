@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 60" width="120" height="60">
+  <!-- Leads -->
+  <line x1="0" y1="30" x2="40" y2="30" stroke="#000000" stroke-width="2" />
+  <line x1="60" y1="30" x2="100" y2="30" stroke="#000000" stroke-width="2" />
+  <!-- Triangle (Anode) -->
+  <polygon points="40,15 40,45 60,30" fill="none" stroke="#000000" stroke-width="2" stroke-linejoin="round" />
+  <!-- Line (Cathode) -->
+  <line x1="60" y1="15" x2="60" y2="45" stroke="#000000" stroke-width="2" stroke-linecap="round" />
+  <!-- Invisible Pins -->
+  <circle cx="0" cy="30" r="5" fill="none" stroke="none" opacity="0" data-pin-number="1" />
+  <circle cx="100" cy="30" r="5" fill="none" stroke="none" opacity="0" data-pin-number="2" />
+</svg>

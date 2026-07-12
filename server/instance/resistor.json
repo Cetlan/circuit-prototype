@@ -1,0 +1,26 @@
+{
+  "name": "Resistor",
+  "prefix": "R",
+  "symbol": {
+    "IEEE": {
+      "url": "/static/resistor.svg"
+    }
+  },
+  "properties": {
+    "resistance": {
+      "label": "Resistance (Ω)",
+      "type": "string",
+      "default": "1k"
+    }
+  },
+  "simulation": [
+    {
+      "engine": "spice",
+      "target": "default",
+      "pins": [
+        "positive",
+        "negative"
+      ]
+    }
+  ]
+}
