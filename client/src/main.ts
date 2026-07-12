@@ -12,11 +12,11 @@ document.getElementById('app')!.innerHTML = `
 (async () => {
   try {
     await Promise.all([
-      store.library.loadComponentFromFile('resistor', 'src/symbols/resistor.svg'),
-      store.library.loadComponentFromFile('capacitor', 'src/symbols/capacitor.svg'),
-      store.library.loadComponentFromFile('inductor', 'src/symbols/inductor.svg'),
-      store.library.loadComponentFromFile('diode', 'src/symbols/diode.svg'),
-      store.library.loadComponentFromFile('NPN transistor', 'src/symbols/npn.svg'),
+      store.library.fetchComponent('resistor', '/api/descriptor/resistor'),
+      store.library.fetchComponent('capacitor', '/api/descriptor/capacitor'),
+      store.library.fetchComponent('inductor', '/api/descriptor/inductor'),
+      store.library.fetchComponent('diode', '/api/descriptor/diode'),
+      store.library.fetchComponent('NPN transistor', '/api/descriptor/npn'),
     ]);
     store.notify();
   } catch (e) {

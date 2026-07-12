@@ -5,6 +5,7 @@ import { WiringTool } from './tools/WiringTool.ts';
 import { PlacementTool } from './tools/PlacementTool.ts';
 import { SelectionTool } from './tools/SelectionTool.ts';
 import { defaultLabelPlacementStrategy } from '../utils/labelPlacement.ts';
+import { ComponentDescriptor, isInlineSymbol } from '../symbols/types.ts';
 
 class ComponentLibrary {
   private cache = new Map<string, ComponentDefinition>();
@@ -74,6 +75,28 @@ class ComponentLibrary {
     if (!response.ok) throw new Error(`Failed to fetch SVG for component ${id} from ${path}`);
     const svgString = await response.text();
     return this.loadComponent(id, svgString, colorOverrides);
+  }
+
+  async fetchComponent(id: string, url: string, colorOverrides?: Record<string, string>): Promise<ComponentDefinition> {
+    const componentResponse = await fetch(url)
+    if (!componentResponse.ok) throw new Error(`Failed to fetch component details for ${id} from ${url}`);
+    const componentDetails = await componentResponse.json() as ComponentDescriptor
+    const symbolDetails = componentDetails.symbol;
+
+
+    // TODO: handle the default differently, and manage possible failures
+    // in this code path
+    const defaultSymbol = symbolDetails["IEEE"]
+
+    if (isInlineSymbol(defaultSymbol)) {
+      const svgString = defaultSymbol.data
+      return this.loadComponent(id, svgString, colorOverrides);
+    }
+    else {
+      const svgResponse = await fetch(defaultSymbol.url)
+      const svgString = await svgResponse.text();
+      return this.loadComponent(id, svgString, colorOverrides);
+    }
   }
 
   get(id: string) { return this.cache.get(id); }

@@ -1,0 +1,26 @@
+{
+  "name": "NPN ransistor",
+  "prefix": "R",
+  "symbol": {
+    "IEEE": {
+      "url": "/static/npn.svg"
+    }
+  },
+  "properties": {
+    "model": {
+      "type": "string",
+      "default": "NMOS",
+      "label": "Model Name"
+    },
+    "w": {
+      "type": "string",
+      "default": "10u",
+      "label": "Width (W)"
+    },
+    "l": {
+      "type": "string",
+      "default": "1u",
+      "label": "Length (L)"
+    }
+  }
+}

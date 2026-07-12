@@ -1,16 +1,16 @@
 {
-  "name": "Resistor",
-  "prefix": "R",
+  "name": "Diode",
+  "prefix": "L",
   "symbol": {
     "IEEE": {
-      "url": "/static/resistor.svg"
+      "url": "/static/diode.svg"
     }
   },
   "properties": {
     "resistance": {
-      "label": "Resistance (Ω)",
+      "label": "Inductance (H)",
       "type": "string",
-      "default": "1k"
+      "default": "1m"
     }
   },
   "simulation": [
@@ -18,8 +18,8 @@
       "engine": "spice",
       "target": "default",
       "pins": [
-        "1",
-        "2"
+        "anode",
+        "cathode"
       ]
     }
   ]

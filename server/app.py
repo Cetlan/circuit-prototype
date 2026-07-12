@@ -6,12 +6,12 @@ from werkzeug.exceptions import InternalServerError
 app = Flask("component server", instance_relative_config=True)
 
 
-@app.route("/components")
+@app.route("/api/components")
 def components():
     return "<p>Connection successful</p>"
 
 
-@app.route("/descriptor/<string:name>")
+@app.route("/api/descriptor/<string:name>")
 def descriptor(name: str):
     filename = Path(app.instance_path, f"{name}.json")
     try:

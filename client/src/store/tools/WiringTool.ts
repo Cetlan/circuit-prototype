@@ -7,7 +7,7 @@ export class WiringTool implements ToolInterface {
   private PIN_THRESHOLD = 15;
   private previewSegments: WireSegment[] = [];
   private isCalculating = false;
-  private worker = new Worker(new URL('../services/router.worker.ts', import.meta.url), { type: 'module' });
+  private worker = new Worker(new URL('../../services/router.worker.ts', import.meta.url), { type: 'module' });
 
   constructor() {
     this.worker.onmessage = (e) => {

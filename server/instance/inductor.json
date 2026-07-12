@@ -1,16 +1,16 @@
 {
-  "name": "Resistor",
-  "prefix": "R",
+  "name": "Inductor",
+  "prefix": "L",
   "symbol": {
     "IEEE": {
-      "url": "/static/resistor.svg"
+      "url": "/static/inductor.svg"
     }
   },
   "properties": {
     "resistance": {
-      "label": "Resistance (Ω)",
+      "label": "Inductance (H)",
       "type": "string",
-      "default": "1k"
+      "default": "1m"
     }
   },
   "simulation": [

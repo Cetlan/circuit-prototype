@@ -1,16 +1,16 @@
 {
-  "name": "Resistor",
-  "prefix": "R",
+  "name": "Capacitor",
+  "prefix": "C",
   "symbol": {
     "IEEE": {
-      "url": "/static/resistor.svg"
+      "url": "/static/capacitor.svg"
     }
   },
   "properties": {
     "resistance": {
-      "label": "Resistance (Ω)",
+      "label": "Capacitance (F)",
       "type": "string",
-      "default": "1k"
+      "default": "1µ"
     }
   },
   "simulation": [
