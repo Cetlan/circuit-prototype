@@ -6,8 +6,9 @@ export interface Pin {
   y: number;
 }
 
-export interface ComponentDefinition {
-  id: string;
+import type { ComponentDescriptor } from '../symbols/types';
+
+export interface ComponentDefinition extends ComponentDescriptor {
   img: HTMLImageElement;
   pins: Pin[];
   width: number;

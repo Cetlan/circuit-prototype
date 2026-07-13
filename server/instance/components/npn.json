@@ -1,6 +1,6 @@
 {
-  "name": "NPN ransistor",
-  "prefix": "R",
+  "name": "NPN Transistor",
+  "prefix": "Q",
   "symbol": {
     "IEEE": {
       "url": "/static/npn.svg"

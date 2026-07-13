@@ -1,6 +1,6 @@
 {
   "name": "Diode",
-  "prefix": "L",
+  "prefix": "D",
   "symbol": {
     "IEEE": {
       "url": "/static/diode.svg"

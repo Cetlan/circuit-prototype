@@ -11,13 +11,15 @@ document.getElementById('app')!.innerHTML = `
 
 (async () => {
   try {
-    await Promise.all([
-      store.library.fetchComponent('resistor', '/api/descriptor/resistor'),
-      store.library.fetchComponent('capacitor', '/api/descriptor/capacitor'),
-      store.library.fetchComponent('inductor', '/api/descriptor/inductor'),
-      store.library.fetchComponent('diode', '/api/descriptor/diode'),
-      store.library.fetchComponent('NPN transistor', '/api/descriptor/npn'),
-    ]);
+    const response = await fetch('/api/components');
+    if (!response.ok) throw new Error(`Failed to fetch component list: ${response.statusText}`);
+
+    const components = await response.json() as Array<{ name: string, href: string }>;
+
+    await Promise.all(
+      components.map(c => store.library.fetchComponent(c.name, c.href))
+    );
+
     store.notify();
   } catch (e) {
     console.error('Failed to load component symbols:', e);

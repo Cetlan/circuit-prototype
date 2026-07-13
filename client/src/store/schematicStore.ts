@@ -9,15 +9,15 @@ import { ComponentDescriptor, isInlineSymbol } from '../symbols/types.ts';
 
 class ComponentLibrary {
   private cache = new Map<string, ComponentDefinition>();
-  async loadComponent(id: string, svgString: string, colorOverrides?: Record<string, string>): Promise<ComponentDefinition> {
-    if (this.cache.has(id)) return this.cache.get(id)!;
+  async loadComponent(descriptor: ComponentDescriptor, svgString: string, colorOverrides?: Record<string, string>): Promise<ComponentDefinition> {
+    if (this.cache.has(descriptor.id)) return this.cache.get(descriptor.id)!;
 
     const DEFAULT_COLOR = '#333333';
 
     const parser = new DOMParser();
     const svgDoc = parser.parseFromString(svgString, 'image/svg+xml');
     const svgElement = svgDoc.querySelector('svg');
-    if (!svgElement) throw new Error(`Invalid SVG for component ${id}`);
+    if (!svgElement) throw new Error(`Invalid SVG for component ${descriptor.id}`);
 
     // Override colors
     const allElements = svgDoc.querySelectorAll('*');
@@ -61,8 +61,8 @@ class ComponentLibrary {
     return new Promise((resolve, reject) => {
       const img = new Image();
       img.onload = () => {
-        const def: ComponentDefinition = { id, img, pins, width, height };
-        this.cache.set(id, def);
+        const def: ComponentDefinition = { ...descriptor, img, pins, width, height };
+        this.cache.set(descriptor.id, def);
         resolve(def);
       };
       img.onerror = reject;
@@ -70,32 +70,25 @@ class ComponentLibrary {
     });
   }
 
-  async loadComponentFromFile(id: string, path: string, colorOverrides?: Record<string, string>): Promise<ComponentDefinition> {
-    const response = await fetch(path);
-    if (!response.ok) throw new Error(`Failed to fetch SVG for component ${id} from ${path}`);
-    const svgString = await response.text();
-    return this.loadComponent(id, svgString, colorOverrides);
-  }
-
   async fetchComponent(id: string, url: string, colorOverrides?: Record<string, string>): Promise<ComponentDefinition> {
     const componentResponse = await fetch(url)
     if (!componentResponse.ok) throw new Error(`Failed to fetch component details for ${id} from ${url}`);
-    const componentDetails = await componentResponse.json() as ComponentDescriptor
+    const componentDetails = (await componentResponse.json()) as ComponentDescriptor;
+
+    // Ensure the descriptor has the ID passed from the request, 
+    // as the server-side JSON files may not include it.
+    componentDetails.id = id;
+
     const symbolDetails = componentDetails.symbol;
-
-
-    // TODO: handle the default differently, and manage possible failures
-    // in this code path
-    const defaultSymbol = symbolDetails["IEEE"]
+    const defaultSymbol = symbolDetails["IEEE"];
 
     if (isInlineSymbol(defaultSymbol)) {
-      const svgString = defaultSymbol.data
-      return this.loadComponent(id, svgString, colorOverrides);
+      return this.loadComponent(componentDetails, defaultSymbol.data, colorOverrides);
     }
     else {
-      const svgResponse = await fetch(defaultSymbol.url)
+      const svgResponse = await fetch(defaultSymbol.url);
       const svgString = await svgResponse.text();
-      return this.loadComponent(id, svgString, colorOverrides);
+      return this.loadComponent(componentDetails, svgString, colorOverrides);
     }
   }
 
@@ -215,14 +208,15 @@ class SchematicStore {
     });
   }
 
-  addComponent(x: number, y: number, def: ComponentDefinition, refdes = 'R1', value = '1K') {
+  addComponent(x: number, y: number, def: ComponentDefinition, refdes?: string, value = '1K') {
+    const finalRefdes = refdes || `${def.prefix}1`;
     this.components.push({
       id: crypto.randomUUID(),
       x: this.snap(x),
       y: this.snap(y),
       rotation: 0,
       definition: def,
-      refdes,
+      refdes: finalRefdes,
       value
     });
     this.updateSpatialIndex();
