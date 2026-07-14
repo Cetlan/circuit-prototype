@@ -81,6 +81,45 @@ export class CircuitManager {
   getComponent(refdes: RefDes) {
     return this.componentStore.getComponent(refdes);
   }
+
+  /**
+   * Generates a SPICE netlist from the current circuit state.
+   */
+  generateSpiceNetlist(): string {
+    const components = this.componentStore.getAllComponents();
+    const lines: string[] = [];
+
+    for (const component of components) {
+      const { refdes, spiceData, pinMap, properties } = component;
+      const netNames: string[] = [];
+
+      for (const pinNum of spiceData.pins) {
+        const pinId = pinMap.get(pinNum);
+        let netName: string | undefined = undefined;
+
+        if (pinId) {
+          const netId = this.netlist.getNetForPin(pinId);
+          if (netId) {
+            netName = this.netlist.getNetName(netId);
+          }
+        }
+
+        // If the pin is not connected to a named net, 
+        // assign it a unique floating net name to avoid accidental connections.
+        if (!netName) {
+          netName = `FLOAT_${refdes}_${pinNum}`;
+        }
+
+        netNames.push(netName);
+      }
+
+      const value = properties['value'] || '0';
+      const line = `${spiceData.target} ${refdes} ${netNames.join(' ')} ${value}`;
+      lines.push(line);
+    }
+
+    return lines.join('\n');
+  }
 }
 
 export const circuitManager = new CircuitManager(new Netlist(), new ComponentStore());

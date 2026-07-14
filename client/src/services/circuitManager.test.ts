@@ -113,5 +113,52 @@ describe('Circuit Logic System', () => {
       circuitManager.addComponent('R1', resSpice, ['1', '2']);
       expect(() => circuitManager.connectComponentPins('R1', '99', 'R1', '1')).toThrow();
     });
+
+    it('should generate a correct SPICE netlist', () => {
+      // Setup: R1 and C1 connected at one pin, others floating
+      circuitManager.addComponent('R1', resSpice, ['1', '2']);
+      circuitManager.addComponent('C1', capSpice, ['1', '2']);
+      circuitManager.setProperty('R1', 'value', '1k');
+      circuitManager.setProperty('C1', 'value', '10u');
+
+      // Connect R1.1 to C1.1
+      const netId = circuitManager.connectComponentPins('R1', '1', 'C1', '1');
+      netlist.setNetName(netId, 'NET_A');
+
+      const netlistStr = circuitManager.generateSpiceNetlist();
+      const lines = netlistStr.split('\n');
+
+      // We expect two lines: one for R1 and one for C1
+      expect(lines.length).toBe(2);
+
+      // Find the lines for R1 and C1 (order might vary based on store)
+      const r1Line = lines.find(l => l.startsWith('default R1'));
+      const c1Line = lines.find(l => l.startsWith('default C1'));
+
+      expect(r1Line).toBeDefined();
+      expect(c1Line).toBeDefined();
+
+      // R1: Pin 1 is NET_A, Pin 2 is FLOAT_R1_2, Value 1k
+      // Format: target refdes pin1 pin2 value
+      expect(r1Line).toBe('default R1 NET_A FLOAT_R1_2 1k');
+
+      // C1: Pin 1 is NET_A, Pin 2 is FLOAT_C1_2, Value 10u
+      expect(c1Line).toBe('default C1 NET_A FLOAT_C1_2 10u');
+    });
+
+    it('should ensure unconnected pins have unique floating names', () => {
+      circuitManager.addComponent('R1', resSpice, ['1', '2']);
+      circuitManager.addComponent('R2', resSpice, ['1', '2']);
+
+      const netlistStr = circuitManager.generateSpiceNetlist();
+
+      // R1.1 and R2.1 should both be floating, but NOT share the same net name
+      const r1Pin1Net = `FLOAT_R1_1`;
+      const r2Pin1Net = `FLOAT_R2_1`;
+
+      expect(netlistStr).toContain(r1Pin1Net);
+      expect(netlistStr).toContain(r2Pin1Net);
+      expect(r1Pin1Net).not.toBe(r2Pin1Net);
+    });
   });
 });
