@@ -1,5 +1,7 @@
 import type { ToolInterface, ToolId, WireSegment } from '../../types/schematic';
 import { store } from '../schematicStore';
+import { commandManager } from '../../services/commandManager';
+import { AddWireCommand } from '../../services/schematicCommands';
 
 
 export class WiringTool implements ToolInterface {
@@ -36,7 +38,7 @@ export class WiringTool implements ToolInterface {
           return; // Ignore click on start pin
         }
         // Finalize wire and return completed status to switch tool
-        store.createWire(start, pin, this.previewSegments);
+        commandManager.execute(new AddWireCommand(start, pin, this.previewSegments));
         store.pendingWire = null;
         return { status: 'completed' } as const;
       } else {

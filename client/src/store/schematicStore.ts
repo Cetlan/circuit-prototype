@@ -97,7 +97,7 @@ class ComponentLibrary {
   getIds() { return Array.from(this.cache.keys()); }
 }
 
-class SchematicStore {
+export class SchematicStore {
   // 1. Declare types without assigning values immediately
   public tools!: Record<ToolId, ToolInterface>;
   public activeTool!: ToolInterface;
@@ -256,6 +256,7 @@ class SchematicStore {
     });
     if (anyMoved) {
       this.updateSpatialIndex();
+      this.updateWirePositions();
       this.notify();
     }
     return anyMoved;

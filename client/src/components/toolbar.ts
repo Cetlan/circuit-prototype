@@ -4,6 +4,7 @@ import { store } from '../store/schematicStore.ts';
 import type { ToolId } from '../types/schematic.ts';
 import { AppNetlistViewer } from './netlist-viewer.ts';
 import { PlacementTool } from '../store/tools/PlacementTool.ts';
+import { commandManager } from '../services/commandManager.ts';
 
 @customElement('app-toolbar')
 export class AppToolbar extends LitElement {
@@ -54,6 +55,10 @@ export class AppToolbar extends LitElement {
       }}>
                         View Netlist
                     </button>
+                    <div class="undo-redo-group">
+                        <button class="tool-btn undo-btn" @click=${() => commandManager.undo()}>Undo</button>
+                        <button class="tool-btn redo-btn" @click=${() => commandManager.redo()}>Redo</button>
+                    </div>
                     ${this.isSelectorOpen && activeTool instanceof PlacementTool ? html`
                         <div class="component-selector">
                             ${store.library.getIds().map(id => html`
@@ -69,7 +74,8 @@ export class AppToolbar extends LitElement {
   }
 
   static styles = css`
-        .toolbar { position: absolute; top: 20px; left: 20px; display: flex; gap: 10px; z-index: 100; background: #f0f0f0; padding: 10px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+         .toolbar { position: absolute; top: 20px; left: 20px; display: flex; gap: 10px; z-index: 100; background: #f0f0f0; padding: 10px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); align-items: center; }
+         .undo-redo-group { display: flex; gap: 5px; border-left: 1px solid #ccc; padding-left: 10px; margin-left: 5px; }
         .tool-container { position: relative; }
         .tool-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 8px 12px; cursor: pointer; border: 1px solid #ccc; background: white; border-radius: 4px; font-family: sans-serif; gap: 5px; }
         .tool-btn.active { background: #ddd; font-weight: bold; border-color: #888; }

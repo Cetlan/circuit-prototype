@@ -1,5 +1,7 @@
 import type { ToolInterface, ToolId } from '../../types/schematic';
 import { store } from '../schematicStore';
+import { commandManager } from '../../services/commandManager';
+import { AddComponentCommand } from '../../services/schematicCommands';
 
 
 export class PlacementTool implements ToolInterface {
@@ -15,7 +17,7 @@ export class PlacementTool implements ToolInterface {
   onClick(e: MouseEvent, worldPos: { x: number; y: number; }) {
     const def = this.definition;
     if (def) {
-      store.addComponent(worldPos.x, worldPos.y, def);
+      commandManager.execute(new AddComponentCommand(def, worldPos.x, worldPos.y));
       return { status: 'completed' } as const;
     }
   }

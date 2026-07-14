@@ -132,18 +132,18 @@ describe('Circuit Logic System', () => {
       expect(lines.length).toBe(2);
 
       // Find the lines for R1 and C1 (order might vary based on store)
-      const r1Line = lines.find(l => l.startsWith('default R1'));
-      const c1Line = lines.find(l => l.startsWith('default C1'));
+      const r1Line = lines.find(l => l.startsWith('R1'));
+      const c1Line = lines.find(l => l.startsWith('C1'));
 
       expect(r1Line).toBeDefined();
       expect(c1Line).toBeDefined();
 
       // R1: Pin 1 is NET_A, Pin 2 is FLOAT_R1_2, Value 1k
-      // Format: target refdes pin1 pin2 value
-      expect(r1Line).toBe('default R1 NET_A FLOAT_R1_2 1k');
+      // Format: refdes pin1 pin2 value
+      expect(r1Line).toBe('R1 NET_A FLOAT_R1_2 1k');
 
       // C1: Pin 1 is NET_A, Pin 2 is FLOAT_C1_2, Value 10u
-      expect(c1Line).toBe('default C1 NET_A FLOAT_C1_2 10u');
+      expect(c1Line).toBe('C1 NET_A FLOAT_C1_2 10u');
     });
 
     it('should ensure unconnected pins have unique floating names', () => {
