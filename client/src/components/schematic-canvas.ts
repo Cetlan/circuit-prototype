@@ -1,6 +1,7 @@
 import { LitElement, html, css } from 'lit';
 import { customElement, query } from 'lit/decorators.js';
 import { store } from '../store/schematicStore.ts';
+import { circuitManager } from '../services/circuitManager.ts';
 import { CanvasUtils } from '../utils/canvasUtils.ts';
 import { defaultLabelPlacementStrategy } from '../utils/labelPlacement.ts';
 
@@ -112,14 +113,18 @@ export class SchematicCanvas extends LitElement {
       this.ctx.font = '30px sans-serif';
       this.ctx.textBaseline = 'middle';
 
+      const logicalComp = circuitManager.getComponent(comp.refdes);
+      const displayRefdes = logicalComp?.refdes ?? comp.refdes;
+      const displayValue = logicalComp?.properties['value'] ?? comp.value;
+
       const refdesPos = defaultLabelPlacementStrategy.calculateRefdesPosition(comp, centerX, centerY);
       this.ctx.textAlign = refdesPos.textAlign;
 
-      this.ctx.fillText(comp.refdes, refdesPos.x, refdesPos.y);
+      this.ctx.fillText(displayRefdes, refdesPos.x, refdesPos.y);
 
       const valuePos = defaultLabelPlacementStrategy.calculateValuePosition(comp, centerX, centerY);
       this.ctx.textAlign = valuePos.textAlign;
-      this.ctx.fillText(comp.value, valuePos.x, valuePos.y);
+      this.ctx.fillText(displayValue, valuePos.x, valuePos.y);
 
       this.ctx.restore();
     });

@@ -103,6 +103,12 @@ describe('Circuit Logic System', () => {
       expect(pinId).toBeDefined();
     });
 
+    it('should throw when updating to a duplicate refdes', () => {
+      circuitManager.addComponent('R1', resSpice, ['1', '2']);
+      circuitManager.addComponent('R2', resSpice, ['1', '2']);
+      expect(() => circuitManager.updateRefdes('R1', 'R2')).toThrow();
+    });
+
     it('should throw error when connecting non-existent pins', () => {
       circuitManager.addComponent('R1', resSpice, ['1', '2']);
       expect(() => circuitManager.connectComponentPins('R1', '99', 'R1', '1')).toThrow();

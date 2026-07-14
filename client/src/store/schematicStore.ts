@@ -1,6 +1,7 @@
 import type { ToolId, Pin, ComponentDefinition, ComponentInstance, WorldPin, Wire, WireSegment, ToolInterface } from '../types/schematic.ts';
 import { SpatialIndex } from './spatialIndex.ts';
 import { router } from '../services/router.ts';
+import { circuitManager } from '../services/circuitManager.ts';
 import { WiringTool } from './tools/WiringTool.ts';
 import { PlacementTool } from './tools/PlacementTool.ts';
 import { SelectionTool } from './tools/SelectionTool.ts';
@@ -209,7 +210,22 @@ class SchematicStore {
   }
 
   addComponent(x: number, y: number, def: ComponentDefinition, refdes?: string, value = '1K') {
-    const finalRefdes = refdes || `${def.prefix}1`;
+    let finalRefdes = refdes;
+    if (!finalRefdes) {
+      const prefix = def.prefix;
+      const existingNumbers = this.components
+        .filter(c => c.refdes.startsWith(prefix))
+        .map(c => parseInt(c.refdes.slice(prefix.length)) || 0);
+      const maxNum = existingNumbers.length > 0 ? Math.max(...existingNumbers) : 0;
+      finalRefdes = `${prefix}${maxNum + 1}`;
+    }
+
+    circuitManager.addComponent(
+      finalRefdes,
+      { engine: 'spice', target: def.id, pins: def.pins.map(p => p.number as any) },
+      def.pins.map(p => p.number as any)
+    );
+
     this.components.push({
       id: crypto.randomUUID(),
       x: this.snap(x),
@@ -256,6 +272,13 @@ class SchematicStore {
 
   deleteSelected() {
     const deletedIds = new Set(this.selectedComponentIds);
+
+    this.components.forEach(comp => {
+      if (deletedIds.has(comp.id)) {
+        circuitManager.removeComponent(comp.refdes);
+      }
+    });
+
     this.components = this.components.filter(comp => !deletedIds.has(comp.id));
     this.wires = this.wires.filter(wire => !deletedIds.has(wire.startPin.componentId) && !deletedIds.has(wire.endPin.componentId));
     this.selectedComponentIds.clear();
@@ -287,6 +310,16 @@ class SchematicStore {
   }
 
   createWire(start: WorldPin, end: WorldPin, providedSegments?: WireSegment[]) {
+    const startComp = this.components.find(c => c.id === start.componentId);
+    const endComp = this.components.find(c => c.id === end.componentId);
+
+    if (startComp && endComp) {
+      circuitManager.connectComponentPins(
+        startComp.refdes, start.pinNumber,
+        endComp.refdes, end.pinNumber
+      );
+    }
+
     const segments = providedSegments || router.route(start, end, this.generateCostMap());
     const finalSegments = segments.length > 0 ? segments : [{ id: crypto.randomUUID(), x1: start.x, y1: start.y, x2: end.x, y2: end.y }];
     this.wires.push({ id: crypto.randomUUID(), startPin: start, endPin: end, segments: finalSegments });

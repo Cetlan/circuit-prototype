@@ -82,3 +82,5 @@ export class CircuitManager {
     return this.componentStore.getComponent(refdes);
   }
 }
+
+export const circuitManager = new CircuitManager(new Netlist(), new ComponentStore());
