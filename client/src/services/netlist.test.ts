@@ -13,7 +13,7 @@ describe('Netlist', () => {
     expect(netlist.getNetName(netId)).toBe('VCC');
 
     const anonymousNetId = netlist.createNet();
-    expect(netlist.getNetName(anonymousNetId)).toBeUndefined();
+    expect(netlist.getNetName(anonymousNetId)).toBe('1');
   });
 
   it('should assign a pin to a net and maintain bidirectional mapping', () => {
@@ -108,6 +108,16 @@ describe('Netlist', () => {
 
   it('should throw error when setting name for non-existent net', () => {
     expect(() => netlist.setNetName('non-existent', 'NewName')).toThrow('Net non-existent does not exist');
+  });
+
+  it('should automatically increment names for anonymous nets', () => {
+    const net1 = netlist.createNet();
+    const net2 = netlist.createNet();
+    const net3 = netlist.createNet();
+
+    expect(netlist.getNetName(net1)).toBe('1');
+    expect(netlist.getNetName(net2)).toBe('2');
+    expect(netlist.getNetName(net3)).toBe('3');
   });
 
   it('should prioritize net1 name during merge if net1 is unnamed', () => {

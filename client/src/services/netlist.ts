@@ -6,6 +6,7 @@ export interface Net {
 }
 
 export class Netlist {
+  private netCounter = 1;
   private pinToNet = new Map<PinId, NetId>();
   private netToPins = new Map<NetId, Set<PinId>>();
   private nets = new Map<NetId, Net>();
@@ -15,8 +16,9 @@ export class Netlist {
    */
   createNet(name?: string): NetId {
     const netId = crypto.randomUUID();
+    const finalName = name ?? (this.netCounter++).toString();
     this.netToPins.set(netId, new Set());
-    this.nets.set(netId, { name });
+    this.nets.set(netId, { name: finalName });
     return netId;
   }
 
@@ -94,12 +96,16 @@ export class Netlist {
     const netObj1 = this.nets.get(net1);
     const netObj2 = this.nets.get(net2);
 
-    if (netObj1 && netObj2 && netObj2.name && !netObj1.name) {
+    if (netObj1 && netObj2 && netObj2.name && (!netObj1.name || this.isGeneratedName(netObj1.name))) {
       netObj1.name = netObj2.name;
     }
 
     this.netToPins.delete(net2);
     this.nets.delete(net2);
+  }
+
+  private isGeneratedName(name?: string): boolean {
+    return name !== undefined && /^\d+$/.test(name);
   }
 
   /**
