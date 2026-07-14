@@ -7,6 +7,7 @@ export interface Pin {
 }
 
 import type { ComponentDescriptor } from '../symbols/types';
+export type { ComponentDescriptor };
 
 export interface ComponentDefinition extends ComponentDescriptor {
   img: HTMLImageElement;
