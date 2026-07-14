@@ -1,5 +1,5 @@
 import { Netlist } from './netlist';
-import { ComponentStore, RefDes, PinNumber, NetlistPinId } from './componentStore';
+import { ComponentStore, RefDes, PinNumber, NetlistPinId, LogicalComponent } from './componentStore';
 
 export class CircuitManager {
   constructor(
@@ -7,23 +7,25 @@ export class CircuitManager {
     private componentStore: ComponentStore
   ) { }
 
+  private nextPinId(): NetlistPinId {
+    return crypto.randomUUID();
+  }
+
   /**
    * Adds a logical component to the circuit and initializes its pins in the netlist.
    */
   addComponent(
     refdes: RefDes,
-    spiceData: { engine: string, target: string, pins: PinNumber[] },
-    pins: PinNumber[]
-  ): void {
+    spiceData: LogicalComponent['spiceData'],
+    pins: PinNumber[],
+    initialProperties: Record<string, string> = {}
+  ) {
     const pinMap = new Map<PinNumber, NetlistPinId>();
+    pins.forEach(pin => {
+      pinMap.set(pin, this.nextPinId());
+    });
 
-    for (const pinNum of pins) {
-      const pinId = crypto.randomUUID();
-      pinMap.set(pinNum, pinId);
-      // Pins start unconnected in the netlist
-    }
-
-    this.componentStore.addComponent(refdes, spiceData, pinMap);
+    this.componentStore.addComponent(refdes, spiceData, pinMap, initialProperties);
   }
 
   /**
@@ -114,7 +116,7 @@ export class CircuitManager {
       }
 
       const value = properties['value'] || '0';
-      const line = `${spiceData.target} ${refdes} ${netNames.join(' ')} ${value}`;
+      const line = `${refdes} ${netNames.join(' ')} ${value}`;
       lines.push(line);
     }
 

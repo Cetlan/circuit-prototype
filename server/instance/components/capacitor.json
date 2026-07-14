@@ -7,7 +7,7 @@
     }
   },
   "properties": {
-    "resistance": {
+    "value": {
       "label": "Capacitance (F)",
       "type": "string",
       "default": "1µ"

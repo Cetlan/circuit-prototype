@@ -24,7 +24,7 @@ def components():
 def descriptor(name: str):
     filename = Path(app.instance_path, "components", f"{name}.json")
     try:
-        with open(filename) as fp:
+        with open(filename, encoding="utf-8") as fp:
             return json.load(fp)
     except FileNotFoundError as e:
         raise

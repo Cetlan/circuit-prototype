@@ -1,5 +1,6 @@
 import './components/schematic-canvas';
 import './components/toolbar';
+import './components/netlist-viewer';
 import { store } from './store/schematicStore';
 
 store.init();
@@ -7,6 +8,7 @@ store.init();
 document.getElementById('app')!.innerHTML = `
     <app-toolbar></app-toolbar>
     <schematic-canvas></schematic-canvas>
+    <app-netlist-viewer></app-netlist-viewer>
 `;
 
 (async () => {

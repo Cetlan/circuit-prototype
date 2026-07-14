@@ -209,7 +209,7 @@ class SchematicStore {
     });
   }
 
-  addComponent(x: number, y: number, def: ComponentDefinition, refdes?: string, value = '1K') {
+  addComponent(x: number, y: number, def: ComponentDefinition, refdes?: string, value?: string) {
     let finalRefdes = refdes;
     if (!finalRefdes) {
       const prefix = def.prefix;
@@ -220,10 +220,13 @@ class SchematicStore {
       finalRefdes = `${prefix}${maxNum + 1}`;
     }
 
+    const finalValue = String(value ?? def.properties?.value?.default ?? '1K');
+
     circuitManager.addComponent(
       finalRefdes,
       { engine: 'spice', target: def.id, pins: def.pins.map(p => p.number as any) },
-      def.pins.map(p => p.number as any)
+      def.pins.map(p => p.number as any),
+      { value: finalValue }
     );
 
     this.components.push({
@@ -233,7 +236,7 @@ class SchematicStore {
       rotation: 0,
       definition: def,
       refdes: finalRefdes,
-      value
+      value: finalValue
     });
     this.updateSpatialIndex();
   }

@@ -2,6 +2,7 @@ import { LitElement, html, css } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import { store } from '../store/schematicStore.ts';
 import type { ToolId } from '../types/schematic.ts';
+import { AppNetlistViewer } from './netlist-viewer.ts';
 import { PlacementTool } from '../store/tools/PlacementTool.ts';
 
 @customElement('app-toolbar')
@@ -46,6 +47,12 @@ export class AppToolbar extends LitElement {
                     <button class="tool-btn ${this.activeToolId === 'component' ? 'active' : ''}" @click=${() => this.setTool('component')}>
                         Place Symbol
                         <div class="preview-box">${def ? html`<img src=${def.img.src} />` : html`<span>...</span>`}</div>
+                    </button>
+                    <button class="tool-btn" @click=${() => {
+        const viewer = document.querySelector('app-netlist-viewer') as AppNetlistViewer;
+        if (viewer) viewer.toggle();
+      }}>
+                        View Netlist
                     </button>
                     ${this.isSelectorOpen && activeTool instanceof PlacementTool ? html`
                         <div class="component-selector">

@@ -16,14 +16,14 @@ export interface LogicalComponent {
 export class ComponentStore {
   private components = new Map<RefDes, LogicalComponent>();
 
-  addComponent(refdes: RefDes, spiceData: LogicalComponent['spiceData'], pins: Map<PinNumber, NetlistPinId>): void {
+  addComponent(refdes: RefDes, spiceData: LogicalComponent['spiceData'], pins: Map<PinNumber, NetlistPinId>, initialProperties: Record<string, string> = {}): void {
     if (this.components.has(refdes)) {
       throw new Error(`Component with refdes ${refdes} already exists`);
     }
 
     this.components.set(refdes, {
       refdes,
-      properties: {},
+      properties: initialProperties,
       spiceData,
       pinMap: pins,
     });

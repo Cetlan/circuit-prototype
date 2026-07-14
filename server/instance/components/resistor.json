@@ -7,7 +7,7 @@
     }
   },
   "properties": {
-    "resistance": {
+    "value": {
       "label": "Resistance (Ω)",
       "type": "string",
       "default": "1k"
